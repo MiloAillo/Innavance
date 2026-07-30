@@ -9,5 +9,160 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
+}
+
+// admin sides
+model Admin {
+  id                    Int                      @id @default(autoincrement())
+  isAutoApprove         Boolean
+  autoApproveTime       String @db.VarChar(6)
+  smartDoorDefaultPin   String @db.VarChar(6)
+
+  notifications         AdminNotifications[]
+  users                 AdminUsers[]
+}
+
+model AdminUsers {
+  id              Int                         @id @default(autoincrement())
+  admin_id        Int
+  type            AdminUsersType              @default(staff)
+  name            String @db.VarChar(255)
+  username        String @db.VarChar(50)      @unique
+  password        String @db.VarChar(255)
+  refreshToken    String? @db.VarChar(255)
+  createdAt       DateTime                    @default(now())
+
+  userAdmin       Admin                       @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+
+  @@map("Admin_Users")
+}
+
+enum AdminUsersType {
+  manager
+  staff
+}
+
+model AdminNotifications {
+  id                  Int                         @id @default(autoincrement())
+  admin_id            Int
+  type                AdminNotificationsType      @default(info)
+  title               String @db.VarChar(255)
+  description         String @db.VarChar(500)
+  createdAt           DateTime                    @default(now())
+
+  notificationAdmin   Admin                       @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+
+  @@map("Admin_Notifications")
+}
+
+enum AdminNotificationsType {
+  info
+  warning
+  important
+}
+
+// user sides
+model Rooms {
+  id                  Int                       @id @default(autoincrement())
+  accountId          String @db.VarChar(12)
+  price               String @db.VarChar(10)
+  smartDoorIsLocked   Boolean
+  smartDoorIsOpened   Boolean
+  electricityOutput   String @db.VarChar(10)
+  waterOutput         String @db.VarChar(10)
+
+  features            RoomsFeatures[]
+  roomsAddons         RoomsAddons[]
+  bookings            Bookings[]
+}
+
+model Addons {
+  id              Int                       @id @default(autoincrement())
+  addon           String @db.VarChar(50)    
+  price           String @db.VarChar(10)
+  borrowMaximum   String @db.VarChar(3)
+
+  roomsAddons     RoomsAddons[]
+  bookingsAddons  BookingsAddons[]
+}
+
+model RoomsAddons {
+  room_id     Int
+  addon_id    Int
+
+  room        Rooms     @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  addon       Addons    @relation(fields: [addon_id], references: [id], onDelete: Cascade)
+  @@id([room_id, addon_id])
+
+  @@map("Rooms_Addons")
+}
+
+model RoomsFeatures {
+  id            Int                         @id @default(autoincrement())
+  room_id       Int
+  feature       String @db.VarChar(200)
+
+  featureRoom   Rooms                       @relation(fields: [room_id], references: [id], onDelete: Cascade)
+
+  @@map("Rooms_Features")
+}
+
+model Bookings {
+  id                      Int                         @id @default(autoincrement())
+  room_id                 Int
+  status                  BookingsStatus
+  name                    String @db.VarChar(255)
+  phoneNumber             String @db.VarChar(25)
+  duration                String @db.VarChar(4)
+  price                   String @db.VarChar(10)
+  paymentMethod           String @db.VarChar(100)
+  isAddonServed           Boolean
+  isInnkeeperCalled       Boolean
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime?                   @updatedAt
+
+  bookingRoom             Rooms                       @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  bookingsAddons          BookingsAddons[]
+  bookingsNotifications   BookingsNotifications[]
+}
+
+enum BookingsStatus {
+  on_hold
+  rejected
+  checking_in
+  checking_out
+  checked_out
+}
+
+model BookingsAddons {
+  booking_id      Int
+  addon_id        Int  
+  count           String @db.VarChar(4)
+
+  addonBooking    Bookings                  @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  addonAddon      Addons                    @relation(fields: [addon_id], references: [id], onDelete: Cascade)
+
+  @@id([booking_id, addon_id])
+
+  @@map("Bookings_Addons")
+}
+
+model BookingsNotifications {
+  id                    Int                             @id @default(autoincrement())
+  booking_id            Int
+  type                  BookingsNotificationsType       @default(info)
+  title                 String @db.VarChar(255)
+  description           String @db.VarChar(500)
+  createdAt             DateTime                        @default(now())
+
+  notificationBooking   Bookings                        @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+
+  @@map("Bookings_Notifications")
+}
+
+enum BookingsNotificationsType {
+  info
+  warning
+  important
 }
