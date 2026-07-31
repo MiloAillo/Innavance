@@ -5,7 +5,8 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -16,8 +17,8 @@ datasource db {
 model Admin {
   id                    Int                      @id @default(autoincrement())
   isAutoApprove         Boolean
-  autoApproveTime       String @db.VarChar(6)
-  smartDoorDefaultPin   String @db.VarChar(6)
+  autoApproveTime       Int
+  smartDoorDefaultPin   Int
 
   notifications         AdminNotifications[]
   users                 AdminUsers[]
@@ -65,12 +66,13 @@ enum AdminNotificationsType {
 // user sides
 model Rooms {
   id                  Int                       @id @default(autoincrement())
-  accountId          String @db.VarChar(12)
-  price               String @db.VarChar(10)
+  accountId           String? @db.VarChar(225)
+  name                String @db.VarChar(225)
+  price               Int
   smartDoorIsLocked   Boolean
   smartDoorIsOpened   Boolean
-  electricityOutput   String @db.VarChar(10)
-  waterOutput         String @db.VarChar(10)
+  electricityOutput   Int
+  waterOutput         Int
 
   features            RoomsFeatures[]
   roomsAddons         RoomsAddons[]
@@ -80,8 +82,8 @@ model Rooms {
 model Addons {
   id              Int                       @id @default(autoincrement())
   addon           String @db.VarChar(50)    
-  price           String @db.VarChar(10)
-  borrowMaximum   String @db.VarChar(3)
+  price           Int
+  borrowMaximum   Int
 
   roomsAddons     RoomsAddons[]
   bookingsAddons  BookingsAddons[]
@@ -101,7 +103,7 @@ model RoomsAddons {
 model RoomsFeatures {
   id            Int                         @id @default(autoincrement())
   room_id       Int
-  feature       String @db.VarChar(200)
+  feature       String @db.VarChar(500)
 
   featureRoom   Rooms                       @relation(fields: [room_id], references: [id], onDelete: Cascade)
 
@@ -115,7 +117,7 @@ model Bookings {
   name                    String @db.VarChar(255)
   phoneNumber             String @db.VarChar(25)
   duration                String @db.VarChar(4)
-  price                   String @db.VarChar(10)
+  price                   Int
   paymentMethod           String @db.VarChar(100)
   isAddonServed           Boolean
   isInnkeeperCalled       Boolean
