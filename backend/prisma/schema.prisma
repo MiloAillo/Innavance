@@ -31,7 +31,7 @@ model AdminUsers {
   name            String @db.VarChar(255)
   username        String @db.VarChar(50)      @unique
   password        String @db.VarChar(255)
-  refreshToken    String? @db.VarChar(255)
+  refreshToken    String? @db.VarChar(255)    @unique
   createdAt       DateTime                    @default(now())
 
   userAdmin       Admin                       @relation(fields: [admin_id], references: [id], onDelete: Cascade)
