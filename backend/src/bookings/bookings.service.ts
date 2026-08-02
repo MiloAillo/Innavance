@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { BookBodyDto } from './dto/book-body.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { generateAccountId } from './helper/generate-account-id';
@@ -6,7 +6,7 @@ import * as bcrypt from "bcrypt"
 import axios from 'axios';
 import { generateRoomPin } from './helper/generate-room-pin';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { delay, Queue } from 'bullmq';
 import maskData from 'maskdata'
 
 @Injectable()
@@ -173,6 +173,40 @@ export class BookingsService {
         }
     }
 
+    async checkout(bookingId: number, accountId: string) {
+        // grab the booking where the booking match the id and the accountId match the room the booking is in
+        const booking = await this.prisma.bookings.findUnique({
+            where: {
+                id: bookingId,
+                bookingRoom: {
+                    accountId: accountId
+                }
+            },
+            include: {
+                bookingRoom: true
+            }
+        })
+        if (!booking) throw new NotFoundException("no active booking found")
+        
+        // fetch admin settings to check the grace time
+        const adminSettings = await this.prisma.admin.findUnique({
+            where: { id: 1 }
+        })
+        if (!adminSettings) throw new InternalServerErrorException()
+        
+        // build state variable that check if grace period is instant (0)
+        const isNoGraceTime = adminSettings.checkOutGracePeriod === 0 ? true : false
+
+        if (isNoGraceTime) this.checkedOut(booking.bookingRoom.name, booking.bookingRoom.id, booking.id, booking.phoneNumber)
+        else this.checkingOut(booking.bookingRoom.name, booking.bookingRoom.id, booking.id, booking.phoneNumber)
+
+        return {
+            message: "successfully checked out.",
+            status: isNoGraceTime ? "checked_out" : "checking_out",
+            grace_period: adminSettings.checkOutGracePeriod
+        }
+    }
+
     // modular function used by another function to make booking automatically switch to checked in based on autoApprove state and time
     async onHold(room_name: string, phone_number: string, isAutoApprove: boolean, autoApproveTime: number, room_id: number, booking_id: number) {
         // if autoApprove is ON, then make a queue to bullMQ    =>   refer to ./src/processor/booking.processor.ts
@@ -227,6 +261,81 @@ export class BookingsService {
         await axios.post(`${process.env.WHATSAPP_SERVICE_URL ?? "http://localhost:3001" }/send`, {
             phone_number: phone_number,
             message: `Thank you for reserving a room at Innavance.\nYour reserve request for ${room_name} has been approved by us, please use the PIN code below to unlock your room door.\nPIN: ${smartDoorPin}\n\n\nDon't forget to access your room dashboard in our web for checking out, calling the innkeeper, and monitor your own room by clicking the url below.\nURL: http://masih-template-kalo-ini/login,\nAccountId: ${accountId}\n\n\nHave any question? don't be shy to call our innkeeper through the dashboard!`
+        }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        })
+    }
+
+    // modular function used by another function to update the room state to checking out
+    async checkingOut(room_name: string, room_id: number, booking_id: number, phone_number: string) {
+        // grab the admin settings
+        const adminSettings = await this.prisma.admin.findUnique({
+            where: { id: 1 }
+        })
+        if (!adminSettings) throw new InternalServerErrorException()
+
+        // change the booking status to checking out
+        await this.prisma.bookings.update({
+            where: { id: booking_id },
+            data: { status: "checking_out" }
+        })
+
+        // add to queue to trigger automatic check out after grace period expired
+        this.bookingQueue.add(
+            'auto_checkout',
+            {
+                room_name,
+                room_id,
+                booking_id,
+                phone_number
+            },
+            {
+                delay: adminSettings.checkOutGracePeriod * 60 * 1000
+            }
+        )
+
+        // notify the client
+        await axios.post(`${process.env.WHATSAPP_SERVICE_URL ?? "http://localhost:3001" }/send`, {
+            phone_number: phone_number,
+            message: `It looks like you checked out from ${room_name} at Innavance.\nWe give you ${adminSettings.checkOutGracePeriod} minutes to pack your belongings and kiss our room goodbye.\n\nPlease leave the room before the grace period ends, as the door PIN will become unusable.`
+        }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        })
+    }
+
+    // modular function used by another function to update the rom state to checked out
+    async checkedOut(room_name: string, room_id: number, booking_id: number, phone_number: string) {
+        // grab the admin settings
+        const adminSettings = await this.prisma.admin.findUnique({
+            where: { id: 1 }
+        })
+        if (!adminSettings) throw new InternalServerErrorException()
+        
+        // rotate the door PIN to the default value and remove the accountId
+        await this.prisma.rooms.update({
+            where: { id: room_id},
+            data: {
+                smartDoorPin: adminSettings.smartDoorDefaultPin,
+                accountId: null
+            }
+        })
+
+        // change the booking status to checked out
+        await this.prisma.bookings.update({
+            where: { id: booking_id },
+            data: { status: "checked_out" }
+        })
+
+        // notify the client
+        await axios.post(`${process.env.WHATSAPP_SERVICE_URL ?? "http://localhost:3001" }/send`, {
+            phone_number: phone_number,
+            message: `You have checked out from ${room_name} at Innavance.\nThe door PIN and Dashboard is now unusable.\n\nThank you for choosing us, we always welcome you and are excited to see you again! 😉\n`
         }, {
             headers: {
                 "Content-Type": "application/json",

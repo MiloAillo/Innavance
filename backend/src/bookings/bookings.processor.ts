@@ -24,6 +24,12 @@ import { BookingsService } from 'src/bookings/bookings.service';
 
         break
       }
+      case 'auto_checkout': {
+        const { room_name, room_id, booking_id, phone_number } = job.data
+
+        await this.bookingsService.checkedOut(room_name, room_id, booking_id, phone_number)
+        break
+      }
     }
 
   }

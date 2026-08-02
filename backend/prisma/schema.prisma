@@ -19,6 +19,7 @@ model Admin {
   isAutoApprove         Boolean
   autoApproveTime       Int
   smartDoorDefaultPin   Int
+  checkOutGracePeriod   Int                      @default(60)
 
   notifications         AdminNotifications[]
   users                 AdminUsers[]
@@ -66,7 +67,7 @@ enum AdminNotificationsType {
 // user sides
 model Rooms {
   id                  Int                       @id @default(autoincrement())
-  accountId           String? @db.VarChar(225)
+  accountId           String? @db.VarChar(225)  @unique
   name                String @db.VarChar(225)
   price               Int
   capacity            Int
@@ -124,7 +125,8 @@ model Bookings {
   paymentMethod           String @db.VarChar(100)
   isAddonServed           Boolean
   isInnkeeperCalled       Boolean
-  isAutoApprove           Boolean                     @default(false)
+  isAutoApprove           Boolean                  @default(false)
+  checkoutGraceTime       Int?
   autoApproveTime         Int?
   createdAt               DateTime                    @default(now())
   updatedAt               DateTime?                   @updatedAt
