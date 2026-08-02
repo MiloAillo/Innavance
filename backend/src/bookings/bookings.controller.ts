@@ -33,5 +33,10 @@ export class BookingsController {
     async checkout(@Param('id', ParseIntPipe) bookingId: number, @Req() request: Request) {
         const accountId = request['accountId']
         const data = await this.bookingsService.checkout(bookingId, accountId)
+
+        return {
+            message: "successfully checked out.",
+            ...data
+        }
     }
 }

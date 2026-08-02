@@ -178,6 +178,7 @@ export class BookingsService {
         const booking = await this.prisma.bookings.findUnique({
             where: {
                 id: bookingId,
+                status: "checked_in",
                 bookingRoom: {
                     accountId: accountId
                 }
@@ -201,7 +202,6 @@ export class BookingsService {
         else this.checkingOut(booking.bookingRoom.name, booking.bookingRoom.id, booking.id, booking.phoneNumber)
 
         return {
-            message: "successfully checked out.",
             status: isNoGraceTime ? "checked_out" : "checking_out",
             grace_period: adminSettings.checkOutGracePeriod
         }
