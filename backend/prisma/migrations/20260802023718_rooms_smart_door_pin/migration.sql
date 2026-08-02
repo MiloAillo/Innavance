@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `rooms` ADD COLUMN `smartDoorPin` INTEGER NOT NULL DEFAULT 157359;

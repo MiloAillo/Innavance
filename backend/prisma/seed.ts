@@ -55,15 +55,19 @@ async function main() {
   });
 
   // create two staff accounts
-  for (let index = 1; index < 3; index++) {
+  for (let index = 2; index < 4; index++) {
     await prisma.adminUsers.upsert({
       where: { id: index },
-      update: {},
+      update: {
+        name: "Staff " + (index - 1),
+        username: "staff" + (index - 1),
+        password: staffHashedPassword
+      },
       create: {
         admin_id: 1,
         type: "staff",
-        name: "Staff " + index,
-        username: "staff" + index,
+        name: "Staff " + (index - 1),
+        username: "staff" + (index - 1),
         password: staffHashedPassword
       }
     });
@@ -111,11 +115,15 @@ async function main() {
       where: { id: roomId },
       update: {
         name: data.name,
-        price: data.price
+        price: data.price,
+        capacity: data.capacity,
+        description: data.description,
       },
       create: {
         name: data.name,
         price: data.price,
+        capacity: data.capacity,
+        description: data.description,
         smartDoorIsLocked: true,
         smartDoorIsOpened: true,
         electricityOutput: 0,

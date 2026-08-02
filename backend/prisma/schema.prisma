@@ -69,6 +69,9 @@ model Rooms {
   accountId           String? @db.VarChar(225)
   name                String @db.VarChar(225)
   price               Int
+  capacity            Int
+  description         String @db.Text
+  smartDoorPin        Int                       @default(157359)
   smartDoorIsLocked   Boolean
   smartDoorIsOpened   Boolean
   electricityOutput   Int
@@ -116,7 +119,7 @@ model Bookings {
   status                  BookingsStatus
   name                    String @db.VarChar(255)
   phoneNumber             String @db.VarChar(25)
-  duration                String @db.VarChar(4)
+  duration                Int
   price                   Int
   paymentMethod           String @db.VarChar(100)
   isAddonServed           Boolean
@@ -132,7 +135,7 @@ model Bookings {
 enum BookingsStatus {
   on_hold
   rejected
-  checking_in
+  checked_in
   checking_out
   checked_out
 }
