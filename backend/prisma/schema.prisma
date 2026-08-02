@@ -147,7 +147,7 @@ enum BookingsStatus {
 model BookingsAddons {
   booking_id      Int
   addon_id        Int  
-  count           String @db.VarChar(4)
+  count           Int
 
   addonBooking    Bookings                  @relation(fields: [booking_id], references: [id], onDelete: Cascade)
   addonAddon      Addons                    @relation(fields: [addon_id], references: [id], onDelete: Cascade)

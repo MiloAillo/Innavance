@@ -27,6 +27,7 @@ export class BookingsService {
                 price: true,
                 paymentMethod: true,
                 isAutoApprove: true,
+                status: true,
                 autoApproveTime: true,
                 createdAt: true,
                 bookingRoom: {
@@ -47,6 +48,7 @@ export class BookingsService {
                 unmaskedStartDigits: 3,
                 unmaskedEndDigits: 3
             }),
+            status: booking.status,
             duration: booking.duration,
             price: maskData.maskStringV2(booking.price.toString()),
             payment_method: booking.paymentMethod,
@@ -139,6 +141,11 @@ export class BookingsService {
 
 
         // 2. CREATE THE BOOKING
+        const addonsToCreate = bookBodyDto.addons.map((addon) => ({
+            addon_id: addon.id,
+            count: addon.count,
+        }))
+
         const booking = await this.prisma.bookings.create({
             data: {
                 room_id: room.id,
@@ -151,10 +158,15 @@ export class BookingsService {
                 autoApproveTime: adminSettings?.autoApproveTime,
                 paymentMethod: paymentMethod,
                 isAddonServed: bookBodyDto.addons.length === 0 ? true : false,
-                isInnkeeperCalled: false
+                isInnkeeperCalled: false,
+
+                bookingsAddons: {
+                    createMany: {
+                        data: addonsToCreate
+                    }
+                }
             }
         })
-
 
         // 3. IF THE waitForApproval IS FALSE, GENERATE THE ROOM accountId AND ROTATE THE ROOM PIN AND SEND IT TO THE USER PHONE NUMBER
         // IF NOT THEN TELL THE CLIENT TO WAIT

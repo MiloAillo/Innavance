@@ -6,6 +6,7 @@ import { AdminsAuthModule } from './admins/admins-auth/admins-auth.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { BullModule } from "@nestjs/bullmq"
+import { DashboardModule } from './dashboard/dashboard.module';
 @Module({
   imports: [
     ConfigModule.forRoot({        // load .env globally across the app
@@ -21,6 +22,7 @@ import { BullModule } from "@nestjs/bullmq"
     PrismaModule,
     RoomsModule,
     BookingsModule,
+    DashboardModule,
   ],
   controllers: [],
   providers: [PrismaService],
