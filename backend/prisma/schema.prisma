@@ -124,6 +124,8 @@ model Bookings {
   paymentMethod           String @db.VarChar(100)
   isAddonServed           Boolean
   isInnkeeperCalled       Boolean
+  isAutoApprove           Boolean                     @default(false)
+  autoApproveTime         Int?
   createdAt               DateTime                    @default(now())
   updatedAt               DateTime?                   @updatedAt
 

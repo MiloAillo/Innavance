@@ -7,6 +7,7 @@ import axios from 'axios';
 import { generateRoomPin } from './helper/generate-room-pin';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import maskData from 'maskdata'
 
 @Injectable()
 export class BookingsService {
@@ -14,6 +15,47 @@ export class BookingsService {
         private readonly prisma: PrismaService,
         @InjectQueue('booking-queue') private readonly bookingQueue: Queue
     ) {}
+
+    async detail(bookingId: number) {
+        // grab the booking detail that the user specified
+        const booking = await this.prisma.bookings.findUnique({
+            where: { id: bookingId },
+            select: {
+                name: true,
+                phoneNumber: true,
+                duration: true,
+                price: true,
+                paymentMethod: true,
+                isAutoApprove: true,
+                autoApproveTime: true,
+                createdAt: true,
+                bookingRoom: {
+                    select: {
+                        name: true
+                    }
+                }
+            }
+        })
+        if (!booking) throw new NotFoundException("booking data with id specified doesn't exist")
+
+        return {
+            name: maskData.maskStringV2(booking.name, {
+                unmaskedStartCharacters: 1,
+                unmaskedEndCharacters: 2
+            }),
+            phone_number: maskData.maskPhone(booking.phoneNumber, {
+                unmaskedStartDigits: 3,
+                unmaskedEndDigits: 3
+            }),
+            duration: booking.duration,
+            price: maskData.maskStringV2(booking.price.toString()),
+            payment_method: booking.paymentMethod,
+            room_name: booking.bookingRoom.name,
+            is_auto_approve: booking.isAutoApprove,
+            auto_approve_time: booking.autoApproveTime,
+            created_at: booking.createdAt
+        }
+    }
 
     async book(bookBodyDto: BookBodyDto) {
         // variable for future uses
@@ -95,9 +137,9 @@ export class BookingsService {
         // then waitForApproval is false
         const waitForApproval = adminSettings?.isAutoApprove === true ? adminSettings.autoApproveTime === 0 ? false : true : true
 
-        
+
         // 2. CREATE THE BOOKING
-        await this.prisma.bookings.create({
+        const booking = await this.prisma.bookings.create({
             data: {
                 room_id: room.id,
                 status: waitForApproval ? "on_hold" : "checked_in",
@@ -105,6 +147,8 @@ export class BookingsService {
                 phoneNumber: bookBodyDto.phone_number,
                 duration: bookBodyDto.duration,
                 price: price,
+                isAutoApprove: adminSettings?.isAutoApprove,
+                autoApproveTime: adminSettings?.autoApproveTime,
                 paymentMethod: paymentMethod,
                 isAddonServed: bookBodyDto.addons.length === 0 ? true : false,
                 isInnkeeperCalled: false
@@ -115,9 +159,9 @@ export class BookingsService {
         // 3. IF THE waitForApproval IS FALSE, GENERATE THE ROOM accountId AND ROTATE THE ROOM PIN AND SEND IT TO THE USER PHONE NUMBER
         // IF NOT THEN TELL THE CLIENT TO WAIT
         if (!waitForApproval) {
-            this.checkedIn(room.name, room.id, bookBodyDto.phone_number)
+            await this.checkedIn(room.name, room.id, bookBodyDto.phone_number, booking.id)
         } else {
-            this.onHold(room.name, bookBodyDto.phone_number, adminSettings?.isAutoApprove ?? false, adminSettings?.autoApproveTime ?? 10, room.id)
+            await this.onHold(room.name, bookBodyDto.phone_number, adminSettings?.isAutoApprove ?? false, adminSettings?.autoApproveTime ?? 10, room.id, booking.id)
         }
 
         return {
@@ -130,7 +174,7 @@ export class BookingsService {
     }
 
     // modular function used by another function to make booking automatically switch to checked in based on autoApprove state and time
-    async onHold(room_name: string, phone_number: string, isAutoApprove: boolean, autoApproveTime: number, room_id: number) {
+    async onHold(room_name: string, phone_number: string, isAutoApprove: boolean, autoApproveTime: number, room_id: number, booking_id: number) {
         // if autoApprove is ON, then make a queue to bullMQ    =>   refer to ./src/processor/booking.processor.ts
         if (isAutoApprove) {
             this.bookingQueue.add(
@@ -138,7 +182,8 @@ export class BookingsService {
                 {
                     room_name,
                     room_id,
-                    phone_number
+                    phone_number,
+                    booking_id
                 },
                 {
                     delay: autoApproveTime * 60 * 1000,
@@ -159,14 +204,20 @@ export class BookingsService {
     }
     
     // modular function used by another function to update the room state to checked in from being on hold in approval queue 
-    async checkedIn(room_name: string, room_id: number, phone_number: string) {
+    async checkedIn(room_name: string, room_id: number, phone_number: string, booking_id: number) {
         const accountId = generateAccountId()
         const smartDoorPin = generateRoomPin()
+
+        // change whose on_hold in that room to checked in
+        await this.prisma.bookings.update({
+            where: { id: booking_id },
+            data: { status: "checked_in" }
+        })
 
         // update the room accountId and door pin
         await this.prisma.rooms.update({
             where: { id: room_id },
-            data: { 
+            data: {
                 accountId: accountId,
                 smartDoorPin: smartDoorPin
             }

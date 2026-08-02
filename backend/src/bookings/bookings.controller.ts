@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { BookBodyDto } from './dto/book-body.dto';
 import { BookingsService } from './bookings.service';
 
@@ -15,5 +15,13 @@ export class BookingsController {
             "message": "successfully booked the room",
             ...data
         }
+    }
+
+    // GET /bookings/:id    =>      see booking detail
+    @Get(":id")
+    async detail(@Param('id') bookingId: number) {
+        const data = await this.bookingsService.detail(bookingId)
+
+        return data
     }
 }
