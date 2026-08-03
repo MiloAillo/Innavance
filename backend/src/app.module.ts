@@ -7,6 +7,9 @@ import { RoomsModule } from './rooms/rooms.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { BullModule } from "@nestjs/bullmq"
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { MetricsService } from './metrics.service';
+
 @Module({
   imports: [
     ConfigModule.forRoot({        // load .env globally across the app
@@ -18,6 +21,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
         port: 6379
       }
     }),
+    ScheduleModule.forRoot(),
     AdminsAuthModule,
     PrismaModule,
     RoomsModule,
@@ -25,6 +29,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
     DashboardModule,
   ],
   controllers: [],
-  providers: [PrismaService],
+  providers: [PrismaService, MetricsService],
 })
 export class AppModule {}

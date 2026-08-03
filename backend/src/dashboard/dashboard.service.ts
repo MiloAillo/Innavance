@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { RequestWithRoomData } from './guard/dashboard.guard';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CallInnkeeperDto } from './dto/call-innkeeper.dto';
+import { NotificationQueryDto } from './dto/notification-query.dto';
 
 @Injectable()
 export class DashboardService {
@@ -67,6 +68,59 @@ export class DashboardService {
                     description: "Don't go anywhere, Innkeeper will arrive at your door shortly."
                 }
             })
+        }
+    }
+
+    async getNotifications(notificationQueryDto: NotificationQueryDto, request: RequestWithRoomData) {
+        const { page = 1, limit = 10, order_by = 'createdAt', order = 'desc', filter_type = ['info', 'important', 'warning'] } = notificationQueryDto
+
+        // build a pagination system
+        const skip = (page - 1) * limit    // calculate how many to skip
+
+        // dynamic variable for ordering rooms data
+        const dataOrder = { [order_by]: order }
+
+        // grab the notifications and their total count
+        const [ notifications, notificationsTotalCount ] = await Promise.all([
+            this.prisma.bookingsNotifications.findMany({
+                where: { 
+                    booking_id: request.data.bookings[0].id,
+                    type: {
+                        in: filter_type
+                    }
+                },
+                skip: skip,
+                take: limit,
+                orderBy: dataOrder,
+                select: {
+                    id: true,
+                    type: true,
+                    title: true,
+                    description: true,
+                    createdAt: true
+                }
+            }),
+            // fetch total notification
+            this.prisma.bookingsNotifications.count({
+                where: { 
+                    booking_id: request.data.bookings[0].id,
+                    type: {
+                        in: filter_type
+                    }
+                }
+            }),
+        ])
+
+        return {
+            notifications,
+            meta: {
+                notification_total: notificationsTotalCount,
+                page,
+                order,
+                order_by,
+                hasPageBefore: page !== 1,
+                hasPageAfter: skip + limit < notificationsTotalCount 
+            }
         }
     }
 }

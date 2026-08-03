@@ -75,8 +75,8 @@ model Rooms {
   smartDoorPin        Int                       @default(157359)
   smartDoorIsLocked   Boolean
   smartDoorIsOpened   Boolean
-  electricityOutput   Int
-  waterOutput         Int
+  electricityOutput   Float
+  waterOutput         Float
 
   features            RoomsFeatures[]
   roomsAddons         RoomsAddons[]

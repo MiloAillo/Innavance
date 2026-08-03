@@ -1,10 +1,10 @@
 import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { BookBodyDto } from './dto/book-body.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { generateAccountId } from './helper/generate-account-id';
+import { generateAccountId } from '../helper/generate-account-id';
 import * as bcrypt from "bcrypt"
 import axios from 'axios';
-import { generateRoomPin } from './helper/generate-room-pin';
+import { generateRoomPin } from '../helper/generate-room-pin';
 import { InjectQueue } from '@nestjs/bullmq';
 import { delay, Queue } from 'bullmq';
 import maskData from 'maskdata'
