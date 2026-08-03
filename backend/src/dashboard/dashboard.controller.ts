@@ -1,6 +1,7 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Query, Req, UseGuards } from '@nestjs/common';
 import * as dashboardGuard from './guard/dashboard.guard';
 import { DashboardService } from './dashboard.service';
+import { CallInnkeeperDto } from './dto/call-innkeeper.dto';
 
 @Controller('dashboard')
 @UseGuards(dashboardGuard.DashboardGuard)
@@ -22,7 +23,10 @@ export class DashboardController {
     }
 
     // add ability to call for innkeeper
-    
+    @Patch(':id/call')
+    async callInnkeeper(@Query() callInkeeperDto: CallInnkeeperDto, @Req() request: dashboardGuard.RequestWithRoomData) {
+        await this.dashboardService.callInnkeeper(callInkeeperDto, request)
+    }  
 
     // notification pull in the guard might not be createdAt descending ordered
 }
