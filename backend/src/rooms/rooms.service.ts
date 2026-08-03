@@ -39,8 +39,9 @@ export class RoomsService {
                 page,
                 order,
                 order_by,
-                hasPageBefore: page !== 1,
-                hasPageAfter: skip + limit < total 
+                has_page_before: page !== 1,
+                has_page_after: skip + limit < total,
+                page_end: Math.ceil(total / limit)
             }
         }
     }

@@ -3,7 +3,6 @@ import * as dashboardGuard from './guard/dashboard.guard';
 import { DashboardService } from './dashboard.service';
 import { CallInnkeeperDto } from './dto/call-innkeeper.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
-import { filter } from 'rxjs';
 
 @Controller('dashboard')
 @UseGuards(dashboardGuard.DashboardGuard)

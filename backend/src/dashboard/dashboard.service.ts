@@ -114,12 +114,13 @@ export class DashboardService {
         return {
             notifications,
             meta: {
-                notification_total: notificationsTotalCount,
+                total: notificationsTotalCount,
                 page,
                 order,
                 order_by,
-                hasPageBefore: page !== 1,
-                hasPageAfter: skip + limit < notificationsTotalCount 
+                has_page_before: page !== 1,
+                has_page_after: skip + limit < notificationsTotalCount,
+                page_end: Math.ceil(notificationsTotalCount / limit)
             }
         }
     }
