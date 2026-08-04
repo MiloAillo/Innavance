@@ -4,13 +4,13 @@ import { Job } from 'bullmq';
 import { BookingsService } from 'src/bookings/bookings.service';
 
 // queue that automatically switch on-hold to checked-in when autoApprove is on and time is set to more than 0
-  @Processor('booking-queue')
-  export class BookingsProcessor extends WorkerHost {
-    constructor(
-      private readonly bookingsService: BookingsService
-    ) { 
-      super()
-    }
+@Processor('booking-queue')
+export class BookingsProcessor extends WorkerHost {
+  constructor(
+    private readonly bookingsService: BookingsService
+  ) { 
+    super()
+  }
 
   // This method runs automatically when the delay reaches zero
   async process(job: Job<{ room_name: string, room_id: number, phone_number: string, booking_id: number }>): Promise<void> {
@@ -31,6 +31,5 @@ import { BookingsService } from 'src/bookings/bookings.service';
         break
       }
     }
-
   }
 }

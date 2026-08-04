@@ -5,10 +5,22 @@ import { AdminUsersOrderBy, AdminUsersQueryDto, AdminUsersType, Order as AdminUs
 import { BookingQueryDto, BookingOrderBy, BookingStatus as BookingQueryStatus, Order as BookingQueryOrder } from '../dto/booking-query.dto';
 import { BookingStatus, Order, OrderBy, RoomIsAvailable, RoomQueryDto } from '../dto/room-query.dto';
 import { DismissCallDto } from '../dto/dismiss-call.dto';
+import { ForceCheckoutDto } from '../dto/force-checkout.dto';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import axios from 'axios';
+import { AddonServedDto } from '../dto/addon-served.dto';
+import { generateAccountId } from 'src/helper/generate-account-id';
+import { generateRoomPin } from 'src/helper/generate-room-pin';
+import { approveQueueDto } from '../dto/approve-queue.dto';
 
 @Injectable()
 export class AdminsDashboardService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        @InjectQueue('admin-booking-queue') private readonly bookingQueue: Queue
+
+    ) {}
 
     async getUserInfo(request: RequestWithJWTPayload) {
         // grab the user data from db according to the parsed token specified
@@ -363,10 +375,178 @@ export class AdminsDashboardService {
             data: {
                 booking_id: booking.id,
                 title: `${admin.name} has Served to Your Room`,
-                description: dismissCallDto.message ?? "Thank you for calling and trusting our staff, don't be shy to call again."
+                description: dismissCallDto.message ?? "Thank you for calling and trusting our staff, don't be shy to call again.",
+                type: "info"
             }
         })
     }
 
-    // async forceCheckout()
+    async addonServed(addonServedDto: AddonServedDto, request: RequestWithJWTPayload) {
+        const booking = await this.prisma.bookings.findUnique({
+            where: { 
+                id: addonServedDto.booking_id,
+                isAddonServed: false,
+                status: "checked_in"
+            }
+        })
+        if (!booking) throw new NotFoundException()
+
+        await this.prisma.bookings.update({
+            where: { id: booking.id },
+            data: { isAddonServed: true }
+        })
+    }
+
+    async forceCheckout(forceCheckoutDto: ForceCheckoutDto, request: RequestWithJWTPayload) {
+        const booking = await this.prisma.bookings.findUnique({
+            where: {
+                id: forceCheckoutDto.booking_id,
+                status: "checked_in"
+            },
+            include: {
+                bookingRoom: true
+            }
+        })
+        if (!booking) throw new NotFoundException()
+
+        const adminSettings = await this.prisma.admin.findUnique({
+            where: { id: 1 }
+        })
+        if (!adminSettings) throw new InternalServerErrorException()
+
+        // create web notification
+        await this.prisma.bookingsNotifications.create({
+            data: {
+                booking_id: booking.id,
+                type: "warning",
+                title: "Uh Oh... You Need to Leave",
+                description: "Our staff has forced you to checkout from the room."
+            }
+        })
+
+        // if allow grace period and the grace period isn't 0 minutes
+        if (forceCheckoutDto.allow_grace_period && adminSettings.checkOutGracePeriod !== 0) {
+            // update the booking to checking out 
+            await this.prisma.bookings.update({
+                where: { id: booking.id },
+                data: { 
+                    status: "checking_out",
+                    checkoutGraceTime: adminSettings.checkOutGracePeriod
+                }
+            })
+
+            // add to queue to trigger automatic check out after grace period expired
+            this.bookingQueue.add(
+                'force_auto_checkout',
+                {
+                    room_name: booking.bookingRoom.name,
+                    room_id: booking.bookingRoom.id,
+                    booking_id: booking.id,
+                    phone_number: booking.phoneNumber
+                },
+                {
+                    delay: adminSettings.checkOutGracePeriod * 60 * 1000
+                }
+            )
+
+            // notify the client
+            await axios.post(`${process.env.WHATSAPP_SERVICE_URL ?? "http://localhost:3001" }/send`, {
+                phone_number: booking.phoneNumber,
+                message: `Uh oh, our staff has forced you to checkout from ${booking.bookingRoom.name} at Innavance.\nWe are granting you extra ${adminSettings.checkOutGracePeriod} minutes to pack your belongings and kiss our room goodbye.\n\nPlease leave the room before the grace period ends, as the door PIN will become unusable.\n\nReason:\n${forceCheckoutDto.message}`
+            }, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+            })
+        } else {
+            // grab the admin settings
+            const adminSettings = await this.prisma.admin.findUnique({
+                where: { id: 1 }
+            })
+            if (!adminSettings) throw new InternalServerErrorException()
+            
+            // update the booking to checked out 
+            await this.prisma.bookings.update({
+                where: { id: booking.id },
+                data: { status: "checked_out" }
+            })
+
+            // rotate the door PIN to the default value and remove the accountId
+            await this.prisma.rooms.update({
+                where: { id: booking.bookingRoom.id },
+                data: {
+                    smartDoorPin: adminSettings.smartDoorDefaultPin,
+                    accountId: null,
+                    isAvailable: true
+                }
+            })
+
+            // notify the client
+            await axios.post(`${process.env.WHATSAPP_SERVICE_URL ?? "http://localhost:3001" }/send`, {
+                phone_number: booking.phoneNumber,
+                message: `You has been forced to checked out from ${booking.bookingRoom.name} at Innavance.\nThe door PIN and Dashboard is now unusable.\nWe are aware of our decision and we are very sorry for it to be this way. 😉\n`
+            }, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+            })
+        }
+    }
+
+    async approveQueue(approveQueueDto: approveQueueDto, request: RequestWithJWTPayload) {
+        // check if staff
+        if (request.user.type == "staff") {
+            const adminSettings = await this.prisma.admin.findUnique({
+                where: { id: 1 }
+            })
+            if(!adminSettings) throw new InternalServerErrorException()
+
+            // throw unauthorized if its not allowed in settings
+            if (!adminSettings.isStaffAllowedToApprove) throw new UnauthorizedException()
+            return
+        }
+
+        const accountId = generateAccountId()
+        const smartDoorPin = generateRoomPin()
+
+        // check if booking exist
+        const booking = await this.prisma.bookings.findUnique({
+            where: {
+                id: approveQueueDto.booking_id,
+                status: "on_hold"
+            },
+            include: {
+                bookingRoom: true
+            }
+        })
+        if (!booking) throw new NotFoundException()
+
+        // change whose on_hold in that room to checked in
+        await this.prisma.bookings.update({
+            where: { id: booking.id },
+            data: { status: "checked_in" }
+        })
+
+        // update the room accountId and door pin
+        await this.prisma.rooms.update({
+            where: { id: booking.room_id },
+            data: {
+                accountId: accountId,
+                smartDoorPin: smartDoorPin
+            }
+        })
+
+        // send the accountId and door PIN to the client
+        await axios.post(`${process.env.WHATSAPP_SERVICE_URL ?? "http://localhost:3001" }/send`, {
+            phone_number: booking.phoneNumber,
+            message: `Thank you for reserving a room at Innavance.\nYour reserve request for ${booking.bookingRoom.name} has been approved by us, please use the PIN code below to unlock your room door.\nPIN: ${smartDoorPin}\n\n\nDon't forget to access your room dashboard in our web for checking out, calling the innkeeper, and monitor your own room by clicking the url below.\nURL: http://masih-template-kalo-ini/login,\nAccountId: ${accountId}\n\n\nHave any question? don't be shy to call our innkeeper through the dashboard!`
+        }, {
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        })
+    }
 }

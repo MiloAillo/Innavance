@@ -5,6 +5,9 @@ import { RoomQueryDto } from '../dto/room-query.dto';
 import { BookingQueryDto } from '../dto/booking-query.dto';
 import { AdminUsersQueryDto } from '../dto/admin-users-query.dto';
 import { DismissCallDto } from '../dto/dismiss-call.dto';
+import { ForceCheckoutDto } from '../dto/force-checkout.dto';
+import { AddonServedDto } from '../dto/addon-served.dto';
+import { approveQueueDto } from '../dto/approve-queue.dto';
 
 @Controller('admins/dashboard')
 @UseGuards(jwtAuthGuard.JwtAuthGuard)
@@ -41,9 +44,27 @@ export class AdminsDashboardController {
         return await this.adminsDasboardService.getSettings(request)
     }
 
-    // PATCH admins/dashboard/call/dismiss
-    @Patch('call/dismiss')
+    // PATCH admins/dashboard/bookings/served
+    @Patch('bookings/served')
+    async addonServed(@Body() addonServedDto: AddonServedDto, request: jwtAuthGuard.RequestWithJWTPayload) {
+        return await this.adminsDasboardService.addonServed(addonServedDto, request)
+    }
+
+    // PATCH admins/dashboard/bookings/dismiss
+    @Patch('bookings/dismiss')
     async dismissCall(@Body() dismissCallDto: DismissCallDto, @Req() request: jwtAuthGuard.RequestWithJWTPayload) {
         return await this.adminsDasboardService.dismissCall(dismissCallDto, request)
+    }
+
+    // PATCH admins/dashboard/bookings/checkout
+    @Patch('bookings/checkout')
+    async forceCheckout(@Body() forceCheckoutDTO: ForceCheckoutDto, @Req() request: jwtAuthGuard.RequestWithJWTPayload) {
+        return await this.adminsDasboardService.forceCheckout(forceCheckoutDTO, request)
+    }
+
+    // PATCH admins/dashboard/bookings/approve
+    @Patch('bookings/approve')
+    async approveQueue(@Body() approveQueueDto: approveQueueDto, @Req() request: jwtAuthGuard.RequestWithJWTPayload) {
+        return await this.adminsDasboardService.approveQueue(approveQueueDto, request)
     }
 }
