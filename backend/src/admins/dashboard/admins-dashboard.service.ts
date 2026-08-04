@@ -1,9 +1,10 @@
-import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { RequestWithJWTPayload } from '../guard/jwt-auth-guard.guard';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AdminUsersOrderBy, AdminUsersQueryDto, AdminUsersType, Order as AdminUsersOrder } from '../dto/admin-users-query.dto';
 import { BookingQueryDto, BookingOrderBy, BookingStatus as BookingQueryStatus, Order as BookingQueryOrder } from '../dto/booking-query.dto';
 import { BookingStatus, Order, OrderBy, RoomIsAvailable, RoomQueryDto } from '../dto/room-query.dto';
+import { DismissCallDto } from '../dto/dismiss-call.dto';
 
 @Injectable()
 export class AdminsDashboardService {
@@ -317,4 +318,55 @@ export class AdminsDashboardService {
             }
         }
     }
+
+    async getSettings(request: RequestWithJWTPayload) {
+        const adminSettings = await this.prisma.admin.findUnique({
+            where: { id: 1 }
+        })
+        if (!adminSettings) throw new InternalServerErrorException()
+
+        return {
+            is_auto_approve: adminSettings.isAutoApprove,
+            auto_approve_time: adminSettings.autoApproveTime,
+            smart_door_default_pin: adminSettings.smartDoorDefaultPin,
+            checkout_grace_period: adminSettings.checkOutGracePeriod,
+            is_staff_allowed_to_approve: adminSettings.isStaffAllowedToApprove,
+            is_staff_allowed_to_force_checkout: adminSettings.isStaffAllowedToForceCheckout,
+            is_staff_allowed_to_dissmiss_call: adminSettings.isStaffAllowedToDismissCall
+        }
+    }
+
+    async dismissCall(dismissCallDto: DismissCallDto, request: RequestWithJWTPayload) {
+        // grab the booking specified by user
+        const booking = await this.prisma.bookings.findUnique({
+            where: { 
+                id: dismissCallDto.booking_id,
+                isInnkeeperCalled: true
+            },
+        })
+        if (!booking) throw new NotFoundException()
+        
+        // grab the admin users that turned off the call
+        const admin = await this.prisma.adminUsers.findUnique({
+            where: { id: request.user.id }
+        })
+        if (!admin) throw new UnauthorizedException()
+
+        // turn off the call
+        await this.prisma.bookings.update({
+            where: { id: booking.id },
+            data: { isInnkeeperCalled: false }
+        })
+
+        // make a web notifications
+        await this.prisma.bookingsNotifications.create({
+            data: {
+                booking_id: booking.id,
+                title: `${admin.name} has Served to Your Room`,
+                description: dismissCallDto.message ?? "Thank you for calling and trusting our staff, don't be shy to call again."
+            }
+        })
+    }
+
+    // async forceCheckout()
 }

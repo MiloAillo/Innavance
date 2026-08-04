@@ -16,13 +16,13 @@ datasource db {
 // admin sides
 model Admin {
   id                              Int                      @id @default(autoincrement())
-isAutoApprove                     Boolean
+  isAutoApprove                   Boolean
   autoApproveTime                 Int
   smartDoorDefaultPin             Int
   checkOutGracePeriod             Int                      @default(60)
   isStaffAllowedToApprove         Boolean                  @default(true)
   isStaffAllowedToForceCheckout   Boolean                  @default(false)
-  isStaffAllowedToDismissCall     Boolean                  @default(true)
+  isStaffAllowedToDismissCall     Boolean               @default(true)
 
   notifications         AdminNotifications[]
   users                 AdminUsers[]
