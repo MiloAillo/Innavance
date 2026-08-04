@@ -72,13 +72,6 @@ export class BookingsService {
         const room = await this.prisma.rooms.findUnique({
             where: { id: bookBodyDto.room_id },
             include: {
-                bookings: {
-                    where: {
-                        status: {
-                            in: ["on_hold", "checked_in", "checking_out"]
-                        }
-                    }
-                },
                 roomsAddons: {
                     include: {
                         addon: true
@@ -91,8 +84,7 @@ export class BookingsService {
         if (!room) throw new NotFoundException("No room specified by room_id found")
         
         // throw error if room already reserved
-        const reservedCount = room.bookings.map((object) => object.id).length
-        if (reservedCount !== 0) throw new UnauthorizedException("Room is already reserved")
+        if (!room.isAvailable) throw new UnauthorizedException("Room is already reserved")
 
         // build an addons lookup map
         const roomAddons = {}
@@ -146,27 +138,35 @@ export class BookingsService {
             count: addon.count,
         }))
 
-        const booking = await this.prisma.bookings.create({
-            data: {
-                room_id: room.id,
-                status: waitForApproval ? "on_hold" : "checked_in",
-                name: bookBodyDto.full_name,
-                phoneNumber: bookBodyDto.phone_number,
-                duration: bookBodyDto.duration,
-                price: price,
-                isAutoApprove: adminSettings?.isAutoApprove,
-                autoApproveTime: adminSettings?.autoApproveTime,
-                paymentMethod: paymentMethod,
-                isAddonServed: bookBodyDto.addons.length === 0 ? true : false,
-                isInnkeeperCalled: false,
+        const [ booking ] = await Promise.all([
+            // the the actual booking data
+            this.prisma.bookings.create({
+                data: {
+                    room_id: room.id,
+                    status: waitForApproval ? "on_hold" : "checked_in",
+                    name: bookBodyDto.full_name,
+                    phoneNumber: bookBodyDto.phone_number,
+                    duration: bookBodyDto.duration,
+                    price: price,
+                    isAutoApprove: adminSettings?.isAutoApprove,
+                    autoApproveTime: adminSettings?.autoApproveTime,
+                    paymentMethod: paymentMethod,
+                    isAddonServed: bookBodyDto.addons.length === 0 ? true : false,
+                    isInnkeeperCalled: false,
 
-                bookingsAddons: {
-                    createMany: {
-                        data: addonsToCreate
+                    bookingsAddons: {
+                        createMany: {
+                            data: addonsToCreate
+                        }
                     }
                 }
-            }
-        })
+            }),
+            // update room isAvailable to false
+            this.prisma.rooms.update({
+                where: { id: room.id },
+                data: { isAvailable: false }
+            })
+        ])
 
         // 3. IF THE waitForApproval IS FALSE, GENERATE THE ROOM accountId AND ROTATE THE ROOM PIN AND SEND IT TO THE USER PHONE NUMBER
         // IF NOT THEN TELL THE CLIENT TO WAIT
@@ -331,10 +331,11 @@ export class BookingsService {
         
         // rotate the door PIN to the default value and remove the accountId
         await this.prisma.rooms.update({
-            where: { id: room_id},
+            where: { id: room_id },
             data: {
                 smartDoorPin: adminSettings.smartDoorDefaultPin,
-                accountId: null
+                accountId: null,
+                isAvailable: true
             }
         })
 

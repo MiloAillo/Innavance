@@ -26,7 +26,8 @@ export class RoomsService {
                 id: true,
                 name: true,
                 price: true,
-                capacity: true
+                capacity: true,
+                isAvailable: true
             }
         }),
         this.prisma.rooms.count()
@@ -49,39 +50,28 @@ export class RoomsService {
     async detail(param: DetailParam) {
         const { id } = param
 
-        // parallel db request for performance
-        const [ data, checkInCount ] = await Promise.all([
-            // grab the rooms with all its addons and features
-            this.prisma.rooms.findUnique({
-                where: { id: id },
-                select: {
-                    id: true,
-                    name: true,
-                    price: true,
-                    capacity: true,
-                    description: true,
-                    features: {
-                        select: {
-                            feature: true
-                        }
-                    },
-                    roomsAddons: {
-                        select: {
-                            addon: true
-                        }
-                    },
-                },
-            }),
-            // count how many person is in an approval queue or checked in (should be 0 or 1)
-            this.prisma.bookings.count({
-                where: {
-                    room_id: id,
-                    status: {
-                        in: ["on_hold", "checked_in", "checking_out"]
+        // grab the rooms with all its addons and features
+        const data = await this.prisma.rooms.findUnique({
+            where: { id: id },
+            select: {
+                id: true,
+                name: true,
+                price: true,
+                capacity: true,
+                description: true,
+                isAvailable: true,
+                features: {
+                    select: {
+                        feature: true
                     }
-                }
-            })
-        ])
+                },
+                roomsAddons: {
+                    select: {
+                        addon: true
+                    }
+                },
+            },
+        })
 
         if (!data) throw new NotFoundException("No rooms found")
         
@@ -89,7 +79,6 @@ export class RoomsService {
         // when the schema involve relations
         // this return here will invlove cleaning the data
         return {
-            checkInAllowed: checkInCount === 0,                             // if no one checking in, then its value will be true 
             ...data,                                                        // spread operator to spread all the data inside this object
             features: data.features.map((object) => object.feature),        // replace features with actual array filled with feature
             roomsAddons: undefined,                                         // omit the roomsAddons pivot table

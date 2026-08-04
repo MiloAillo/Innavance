@@ -6,9 +6,9 @@ import { AdminsAuthModule } from './admins/admins-auth/admins-auth.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { BullModule } from "@nestjs/bullmq"
-import { DashboardModule } from './dashboard/dashboard.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MetricsService } from './metrics.service';
+import { AdminsDashboardModule } from './admins/dashboard/admins-dashboard.module';
 
 @Module({
   imports: [
@@ -26,7 +26,7 @@ import { MetricsService } from './metrics.service';
     PrismaModule,
     RoomsModule,
     BookingsModule,
-    DashboardModule,
+    AdminsDashboardModule,
   ],
   controllers: [],
   providers: [PrismaService, MetricsService],

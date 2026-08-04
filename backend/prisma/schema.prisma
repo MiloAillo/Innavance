@@ -15,11 +15,14 @@ datasource db {
 
 // admin sides
 model Admin {
-  id                    Int                      @id @default(autoincrement())
-  isAutoApprove         Boolean
-  autoApproveTime       Int
-  smartDoorDefaultPin   Int
-  checkOutGracePeriod   Int                      @default(60)
+  id                              Int                      @id @default(autoincrement())
+isAutoApprove                     Boolean
+  autoApproveTime                 Int
+  smartDoorDefaultPin             Int
+  checkOutGracePeriod             Int                      @default(60)
+  isStaffAllowedToApprove         Boolean                  @default(true)
+  isStaffAllowedToForceCheckout   Boolean                  @default(false)
+  isStaffAllowedToDismissCall     Boolean                  @default(true)
 
   notifications         AdminNotifications[]
   users                 AdminUsers[]
@@ -72,6 +75,7 @@ model Rooms {
   price               Int
   capacity            Int
   description         String @db.Text
+  isAvailable         Boolean                   @default(true)
   smartDoorPin        Int                       @default(157359)
   smartDoorIsLocked   Boolean
   smartDoorIsOpened   Boolean

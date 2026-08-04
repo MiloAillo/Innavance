@@ -5,6 +5,7 @@ import * as bcrypt from "bcrypt"
 import { randomUUID } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { RefreshDto } from './dto/refresh.dto';
+import { ActiveToken, JWTPayload } from '../guard/jwt-auth-guard.guard';
 
 @Injectable()
 export class AdminsAuthService {
@@ -34,11 +35,13 @@ export class AdminsAuthService {
         })
 
         // generate active token (signed JWT token)
-        const activeToken = this.jwtService.sign({
+        const jwtPayload: JWTPayload = {
             id: user.id,
             username: user.username,
-            type: user.type
-        })
+            type: user.type,
+        }
+
+        const activeToken: ActiveToken = this.jwtService.sign(jwtPayload)
 
         return { refreshToken, activeToken }
     }
