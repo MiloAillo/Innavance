@@ -3,6 +3,7 @@ import * as jwtAuthGuard from '../guard/jwt-auth-guard.guard';
 import { AdminsDashboardService } from './admins-dashboard.service';
 import { RoomQueryDto } from '../dto/room-query.dto';
 import { BookingQueryDto } from '../dto/booking-query.dto';
+import { AdminUsersQueryDto } from '../dto/admin-users-query.dto';
 
 @Controller('admins/dashboard')
 export class AdminsDashboardController {
@@ -25,5 +26,11 @@ export class AdminsDashboardController {
     @Get('bookings')
     async getBookings(@Query() bookingQueryDto: BookingQueryDto) {
         return await this.adminsDasboardService.getBookings(bookingQueryDto)
+    }
+
+    // GET admins/dashboard/users      =>      get paginated admin users list
+    @Get('users')
+    async getAdminUsers(@Query() adminUsersQueryDto: AdminUsersQueryDto) {
+        return await this.adminsDasboardService.getAdminUsers(adminUsersQueryDto)
     }
 }

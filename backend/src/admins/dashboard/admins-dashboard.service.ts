@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { RequestWithJWTPayload } from '../guard/jwt-auth-guard.guard';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { AdminUsersOrderBy, AdminUsersQueryDto, AdminUsersType, Order as AdminUsersOrder } from '../dto/admin-users-query.dto';
 import { BookingQueryDto, BookingOrderBy, BookingStatus as BookingQueryStatus, Order as BookingQueryOrder } from '../dto/booking-query.dto';
 import { BookingStatus, Order, OrderBy, RoomIsAvailable, RoomQueryDto } from '../dto/room-query.dto';
 
@@ -225,6 +226,94 @@ export class AdminsDashboardService {
                 has_page_before: page !== 1,
                 has_page_after: skip + limit < bookingsCount,
                 page_end: Math.ceil(bookingsCount / limit)
+            }
+        }
+    }
+
+    async getAdminUsers(adminUsersQueryDto: AdminUsersQueryDto) {
+        const {
+            filter_type = [AdminUsersType.manager, AdminUsersType.staff],
+            filter_admin_id = undefined,
+            name = undefined,
+            username = undefined,
+            include_admin = false,
+            order = AdminUsersOrder.desc,
+            order_by = AdminUsersOrderBy.createdAt,
+            page = 1,
+            limit = 10
+        } = adminUsersQueryDto
+
+        const skip = (page - 1) * limit
+
+        const whereORM = {
+            type: {
+                in: filter_type
+            },
+            ...(typeof filter_admin_id !== "undefined" ? {
+                admin_id: filter_admin_id
+            } : {}),
+            ...(typeof name !== "undefined" ? {
+                name: {
+                    contains: name
+                }
+            } : {}),
+            ...(typeof username !== "undefined" ? {
+                username: {
+                    contains: username
+                }
+            } : {})
+        }
+
+        const includeORM = include_admin
+            ? {
+                include: {
+                    userAdmin: {
+                        select: {
+                            id: true,
+                            isAutoApprove: true,
+                            autoApproveTime: true,
+                            checkOutGracePeriod: true,
+                            isStaffAllowedToApprove: true,
+                            isStaffAllowedToForceCheckout: true,
+                            isStaffAllowedToDismissCall: true
+                        }
+                    }
+                }
+            }
+            : undefined
+
+        const [users, usersCount] = await Promise.all([
+            this.prisma.adminUsers.findMany({
+                where: whereORM,
+                ...includeORM,
+                select: include_admin ? undefined : {
+                    id: true,
+                    admin_id: true,
+                    type: true,
+                    name: true,
+                    username: true,
+                    createdAt: true
+                },
+                orderBy: {
+                    [order_by]: order
+                },
+                skip: skip,
+                take: limit
+            }),
+            this.prisma.adminUsers.count({
+                where: whereORM
+            })
+        ])
+
+        return {
+            data: users,
+            meta: {
+                page,
+                order,
+                order_by,
+                has_page_before: page !== 1,
+                has_page_after: skip + limit < usersCount,
+                page_end: Math.ceil(usersCount / limit)
             }
         }
     }
