@@ -1,10 +1,10 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto } from '../dto/login.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from "bcrypt"
 import { randomUUID } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
-import { RefreshDto } from './dto/refresh.dto';
+import { RefreshDto } from '../dto/refresh.dto';
 import { ActiveToken, JWTPayload } from '../guard/jwt-auth-guard.guard';
 
 @Injectable()

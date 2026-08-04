@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { AdminsAuthService } from './admins-auth.service';
-import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
+import { LoginDto } from '../dto/login.dto';
+import { RefreshDto } from '../dto/refresh.dto';
 import { JwtAuthGuard } from '../guard/jwt-auth-guard.guard';
 
 @Controller('admins/auth')

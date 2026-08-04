@@ -1,7 +1,8 @@
 import { Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { RequestWithJWTPayload } from '../guard/jwt-auth-guard.guard';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { BookingStatus, Order, OrderBy, RoomIsAvailable, RoomQueryDto } from '../admins-auth/dto/room-query.dto';
+import { BookingQueryDto, BookingOrderBy, BookingStatus as BookingQueryStatus, Order as BookingQueryOrder } from '../dto/booking-query.dto';
+import { BookingStatus, Order, OrderBy, RoomIsAvailable, RoomQueryDto } from '../dto/room-query.dto';
 
 @Injectable()
 export class AdminsDashboardService {
@@ -118,5 +119,113 @@ export class AdminsDashboardService {
 
         /// add the pagination info to meta
 
+    }
+
+    async getBookings(bookingQueryDto: BookingQueryDto) {
+        const {
+            filter_booking_status = [BookingQueryStatus.checked_in, BookingQueryStatus.checked_out, BookingQueryStatus.checking_out, BookingQueryStatus.on_hold, BookingQueryStatus.rejected],
+            booking_name = undefined,
+            booking_phone_number = undefined,
+            room_name = undefined,
+            payment_method = undefined,
+            include_room = true,
+            filter_call = undefined,
+            filter_addon_served = undefined,
+            filter_auto_approve = undefined,
+            order = BookingQueryOrder.desc,
+            order_by = BookingOrderBy.createdAt,
+            page = 1,
+            limit = 10
+        } = bookingQueryDto
+
+        const skip = (page - 1) * limit
+
+        const whereORM = {
+            status: {
+                in: filter_booking_status
+            },
+            ...(typeof booking_name !== "undefined" ? {
+                name: {
+                    contains: booking_name
+                }
+            } : {}),
+            ...(typeof booking_phone_number !== "undefined" ? {
+                phoneNumber: {
+                    contains: booking_phone_number
+                }
+            } : {}),
+            ...(typeof payment_method !== "undefined" ? {
+                paymentMethod: {
+                    contains: payment_method
+                }
+            } : {}),
+            ...(typeof filter_call !== "undefined" ? {
+                isInnkeeperCalled: filter_call
+            } : {}),
+            ...(typeof filter_addon_served !== "undefined" ? {
+                isAddonServed: filter_addon_served
+            } : {}),
+            ...(typeof filter_auto_approve !== "undefined" ? {
+                isAutoApprove: filter_auto_approve
+            } : {}),
+            ...(typeof room_name !== "undefined" ? {
+                bookingRoom: {
+                    name: {
+                        contains: room_name
+                    }
+                }
+            } : {})
+        }
+
+        const orderByORM = order_by === BookingOrderBy.room_name
+            ? {
+                bookingRoom: {
+                    name: order
+                }
+            }
+            : {
+                [order_by]: order
+            }
+
+        const includeORM = include_room
+            ? {
+                include: {
+                    bookingRoom: {
+                        select: {
+                            id: true,
+                            name: true,
+                            price: true,
+                            capacity: true,
+                            isAvailable: true
+                        }
+                    }
+                }
+            }
+            : undefined
+
+        const [bookings, bookingsCount] = await Promise.all([
+            this.prisma.bookings.findMany({
+                where: whereORM,
+                ...includeORM,
+                orderBy: orderByORM,
+                skip: skip,
+                take: limit
+            }),
+            this.prisma.bookings.count({
+                where: whereORM
+            })
+        ])
+
+        return {
+            data: bookings,
+            meta: {
+                page,
+                order,
+                order_by,
+                has_page_before: page !== 1,
+                has_page_after: skip + limit < bookingsCount,
+                page_end: Math.ceil(bookingsCount / limit)
+            }
+        }
     }
 }
