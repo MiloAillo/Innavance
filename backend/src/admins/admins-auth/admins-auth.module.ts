@@ -17,6 +17,7 @@ import { PassportModule } from "@nestjs/passport"
     }),
   ],
   controllers: [AdminsAuthController],
-  providers: [AdminsAuthService]
+  providers: [AdminsAuthService],
+  exports: [JwtModule]
 })
 export class AdminsAuthModule {}
