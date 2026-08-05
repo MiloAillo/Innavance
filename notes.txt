@@ -1,0 +1,4 @@
+backend:
+- enforce staff permission check in every service needed
+- add endpoint to change part of things according to the settings page in LFW
+- add payment gateway
