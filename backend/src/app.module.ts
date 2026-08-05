@@ -9,6 +9,7 @@ import { BullModule } from "@nestjs/bullmq"
 import { ScheduleModule } from '@nestjs/schedule';
 import { MetricsService } from './metrics.service';
 import { AdminsDashboardModule } from './admins/dashboard/admins-dashboard.module';
+import { WebsocketModule } from './websocket/websocket.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AdminsDashboardModule } from './admins/dashboard/admins-dashboard.modul
     RoomsModule,
     BookingsModule,
     AdminsDashboardModule,
+    WebsocketModule,
   ],
   controllers: [],
   providers: [PrismaService, MetricsService],
