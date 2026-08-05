@@ -23,6 +23,10 @@ export class BookBodyDto {
     @Max(9999)
     duration!: number
 
+    @IsNotEmpty()
+    @IsString()
+    @MaxLength(50)
+    payment_method!: string
 
     @IsArray()
     @ValidateNested({ each: true })

@@ -62,7 +62,7 @@ export class BookingsService {
     async book(bookBodyDto: BookBodyDto) {
         // variable for future uses
         let price = 0                     // might be temporary
-        const paymentMethod = "e-money"     // temporary, cuz i haven't figured out the payment gateway
+        const paymentMethod = bookBodyDto.payment_method
 
 
         // 1. CHECKING THE USER REQUEST
