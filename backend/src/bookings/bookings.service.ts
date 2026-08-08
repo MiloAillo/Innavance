@@ -177,6 +177,7 @@ export class BookingsService {
         }
 
         return {
+            booking_id: booking.id,
             room_name: room.name,
             duration: bookBodyDto.duration,
             price: price,
@@ -245,7 +246,8 @@ export class BookingsService {
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
-            }
+            },
+            timeout: 10000
         })
     }
     
@@ -277,7 +279,8 @@ export class BookingsService {
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
-            }
+            },
+            timeout: 10000
         })
     }
 
