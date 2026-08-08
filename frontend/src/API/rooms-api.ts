@@ -1,11 +1,11 @@
 import axios from "axios"
-import { genericAPI } from "../axios-config/generic-instance"
+import { genericAPI } from "./axios-config/generic-instance"
 
 export const getRoomDetail = async (id: number | string) => {
     try {
         const res = await genericAPI.get(`${import.meta.env.VITE_BACKEND_URL}/rooms/${id}`)
-        return res
+        return res.data
     } catch (err) {
-        return Promise.reject()        
+        return Promise.reject(err)        
     }
 }

@@ -20,7 +20,7 @@ export function AddonCounter({name, maximum, price, id, onCountChange}: AddonCou
     }
 
     return (
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3 p-3 bg-neutral-50/50 rounded-lg border border-neutral-200 hover:border-neutral-400 transition-colors">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-3 p-3 bg-neutral-50/50 rounded-lg border border-neutral-200 hover:border-neutral-400 transition-colors">
             <div className="flex flex-col flex-1">
                 <p className="font-medium text-sm">{name}</p>
                 <p className="text-xs text-neutral-500">Rp.{(count * price).toLocaleString("ID")}</p>

@@ -1,10 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router";
 import type { JSX } from "react/jsx-runtime";
-import { getRoomDetail } from "../../API/bookings/rooms-api";
+import { getRoomDetail } from "../../API/rooms-api";
 import type { RoomDetail } from "../../types/room-detail.type";
-import { Check, Coins, Loader2Icon, User, WalletCards } from "lucide-react";
+import { Check, CircleQuestionMark, Coins, Loader2Icon, WalletCards, XIcon } from "lucide-react";
 import { AddonCounter } from "../../components/addon-counter";
+import { motion, AnimatePresence, spring, scale } from "framer-motion"
+import { postReservation } from "../../API/bookings-api";
+import type { AddonType } from "../../types/post-reservation.type";
+import type { BookingResponse } from "../../types/booking-response.type";
+
 
 export function Bookings(): JSX.Element {
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -21,10 +26,13 @@ export function Bookings(): JSX.Element {
     // stay duration counter
     const [duration, setDuration] = useState(1)
     const [addonCounts, setAddonCounts] = useState<{ [key: number]: number }>({})
+    const [paymentMethod, setPaymentMethod] = useState("")
     const [fullName, setFullName] = useState("")
     const [phoneNumber, setPhoneNumber] = useState("")
     const [agreedToTerms, setAgreedToTerms] = useState(false)
     const [transition, setTransition] = useState(100)
+    const [bookingId, setBookingId] = useState(0)
+    const [waitForApproval, setWaitForApproval] = useState(false)
 
     const calculateTotalPrice = () => {
         if (!roomData) return 0
@@ -44,7 +52,6 @@ export function Bookings(): JSX.Element {
     
     // image simulation
     let time = 0
-    
     useEffect(() => {
         const canvas = canvasRef.current
         if (!canvas) return
@@ -112,9 +119,8 @@ export function Bookings(): JSX.Element {
         
     }, [state, transition])
 
+    // state manager
     useEffect(() => {
-        console.log(roomData)
-
         // if there is no room id in the url
         if (!room_id) {
             setState("NO_ROOM")
@@ -124,21 +130,38 @@ export function Bookings(): JSX.Element {
         // fetch the room detail
         if (state === "FETCH_ROOM") {
             getRoomDetail(room_id).then((data) => {
-                setRoomData(data.data)
-                setState("ROOM_OVERVIEW")
+                setRoomData(data)
+                setTimeout(() => setState("ROOM_OVERVIEW"), 500)
             }).catch(() => setState("NO_ROOM"))
         }
 
-        // temp
-        if (state === "PAYMENT_LOADING") setTimeout(() => setState("BOOKING_SUCCESS"), 3000)
-    }, [state])
+        // if the user done selecting payment method
+        if (state === "PAYMENT_LOADING") {
+            if (!roomData) return
+            
+            // generating backend compatible addons array
+            const addons: AddonType[] = []
+            roomData?.addons.forEach((data) => {
+                const addonCount = addonCounts[data.id]
+                if (addonCount) addons.push({ id: data.id, count: addonCount })
+            })
 
-    const FETCH_ROOM_UI = state === "FETCH_ROOM" &&
-    (
-        <>
-            <p>fetching room</p>
-        </>
-    )
+            postReservation({
+                room_id: roomData.id,
+                full_name: fullName,
+                phone_number: phoneNumber,
+                payment_method: paymentMethod,
+                duration: duration,
+                addons: addons
+            })
+            .then((data: BookingResponse) => {
+                setBookingId(data.booking_id)
+                setWaitForApproval(data.wait_for_approval)
+                setState("BOOKING_SUCCESS")
+            })
+            .catch(() => setState("BOOKING_FAILED"))
+        }
+    }, [state])
 
     const IMAGE_CARD = (
         <>
@@ -227,7 +250,7 @@ export function Bookings(): JSX.Element {
                 {/* Duration Counter */}
                 <div className="flex flex-col gap-2">
                     <p>Stay Duration</p>
-                    <div className="flex flex-col md:flex-row gap-5 items-center">
+                    <div className="flex flex-col lg:flex-row gap-5 items-center">
                         <div>
                             <div className="flex flex-row items-center gap-2">
                                 <div onClick={() => setDuration(Math.max(1, duration - 1))} className="w-8 h-8 rounded-full bg-neutral-800 text-xl flex justify-center items-center text-white cursor-pointer hover:bg-neutral-700">{"-"}</div>
@@ -313,7 +336,7 @@ export function Bookings(): JSX.Element {
     const FOURTH_CARD = (
         <>
             <div className="flex-1 flex flex-col gap-6 p-5">
-                <p className="font-semibold text-xl">{roomData?.name}</p>
+                <p className="font-bold text-2xl">{roomData?.name}</p>
 
                 <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -352,7 +375,7 @@ export function Bookings(): JSX.Element {
 
                 <div className="mt-auto pt-6 border-t border-neutral-300">
                     <p className="text-sm text-neutral-600 mb-1">Final Price</p>
-                    <p className="font-bold text-3xl">Rp.{calculateTotalPrice().toLocaleString("ID")}</p>
+                    <p className="font-bold text-2xl">Rp.{calculateTotalPrice().toLocaleString("ID")}</p>
                 </div>
             </div>
         </>
@@ -361,7 +384,7 @@ export function Bookings(): JSX.Element {
     const FIFTH_CARD = (
         <>
             <div className="flex-1 flex flex-col gap-3 p-5">
-                <p className="text-xl font-semibold text-center">Choose Payment Method</p>
+                <p className="text-xl font-bold text-center">Choose Payment Method</p>
                 <div className="flex flex-col justify-between gap-10">
                     <div className="flex flex-col gap-3">
                         <div className="relative w-full h-20 bg-neutral-50/20 border border-neutral-800/50 rounded-xl flex justify-center items-center gap-2 opacity-50">
@@ -375,7 +398,7 @@ export function Bookings(): JSX.Element {
                             <p className="absolute bottom-1 left-2 font-light text-xs text-red-600">Unavailable</p>
                         </div>
                     </div>
-                    <div onClick={() => setState("PAYMENT_LOADING")} className="relative w-full h-20 bg-neutral-50/20 border border-neutral-800/50 rounded-xl flex justify-center items-center gap-2 opacity-100 overflow-hidden hover:scale-102 transition-all">
+                    <div onClick={() => { setPaymentMethod("Cash"); setState("PAYMENT_LOADING") }} className="relative w-full h-20 bg-neutral-50/20 border border-neutral-800/50 rounded-xl flex justify-center items-center gap-2 opacity-100 overflow-hidden hover:scale-102 transition-all">
                         <div className="absolute top-0 left-0 -translate-12 blur-3xl w-40 h-20 rounded-full bg-indigo-600 animate-pulse" />
                         <div className="absolute top-0 left-100 -translate-y-20 -translate-x-20 blur-3xl w-40 h-20 rounded-full bg-pink-600 animate-pulse" />
                         <div className="absolute blur-3xl translate-y-15 w-40 h-20 rounded-full bg-blue-300 animate-pulse" />
@@ -387,91 +410,177 @@ export function Bookings(): JSX.Element {
         </>
     )
 
+    const FRAMER_SWIPE_IN_OUT = {
+        initial: { opacity: 0 },
+        animate: { opacity: 100 },
+        // exit: {  },
+        transition: { type: spring, stiffness: 300, damping: 30, mass: 2, delay: 0.1 }
+    }
+
+    const FETCH_ROOM_UI = state === "FETCH_ROOM" &&
+    (
+        <motion.div 
+            key="FETCH_ROOM_UI"
+            className="px-8 py-4 flex gap-2"
+            {...FRAMER_SWIPE_IN_OUT}
+        >
+            <Loader2Icon className="animate-spin" />
+            <p className="font-semibold">Fetching the room data for you...</p>
+        </motion.div>
+    )
+
     const PAYMENT_LOADING_UI = state === "PAYMENT_LOADING" &&
     (
-        <>
-            <div className="absolute text-neutral-50 flex justify-center items-center gap-3">
-                <Loader2Icon className="animate-spin" />
-                <p>Reserving the room...</p>
-            </div>
-        </>
+        <motion.div 
+            key="PAYMENT_LOADING_UI"
+            className="text-neutral-800 flex justify-center items-center gap-3 py-5 px-10"
+            {...FRAMER_SWIPE_IN_OUT}
+        >
+            <Loader2Icon className="animate-spin" />
+            <p className="font-semibold">Reserving the room...</p>
+        </motion.div>
     )
 
     const ROOM_OVERVIEW_UI = state === "ROOM_OVERVIEW" &&
     (
-        <>
+        <motion.div 
+            key="ROOM_OVERVIEW_UI"
+            className="w-full h-full flex flex-col md:flex-row"
+            {...FRAMER_SWIPE_IN_OUT}
+        >
             {IMAGE_CARD}
             {FIRST_CARD}
-        </>
+        </motion.div>
     )
 
     const ROOM_RESERVATION_UI = state === "ROOM_RESERVATION" &&
     (
-        <>
+        <motion.div 
+            key="ROOM_RESERVATION_UI"
+            className="w-full h-full flex flex-col md:flex-row"
+            {...FRAMER_SWIPE_IN_OUT}
+        >
             {FIRST_CARD}
             {THIRD_CARD}
-        </>
+        </motion.div>
     )
 
     const ROOM_PAYMENT_UI = state === "ROOM_PAYMENT" && 
     (
-        <>
+        <motion.div 
+            key="ROOM_PAYMENT_UI"
+            className="w-full h-full flex flex-col md:flex-row"
+            {...FRAMER_SWIPE_IN_OUT}
+        >
             {FOURTH_CARD}
             {FIFTH_CARD}
-        </>
+        </motion.div>
     )
 
     const BOOKING_SUCCESS_UI = state === "BOOKING_SUCCESS" &&
     (
-        <>
-            <div className="flex flex-col items-center w-full py-8">
-                <div>
-                    <Check size={85} />
-                </div>
-                <div className="flex flex-col justify-center items-center gap-3">
-                    <p className="font-semibold text-xl">Room Reserved</p>
-                    <div className="text-center flex flex-col gap-8">
-                        <p className="font-medium">Your booking has been sent to our staff and is waiting for approval</p>
-                        <p>Go to <a className="text-blue-500 underline">approval page</a></p>
-                    </div>
-
+        <motion.div 
+            key="BOOKING_SUCCESS_UI"
+            className="flex flex-col items-center w-full py-5 px-5"
+            {...FRAMER_SWIPE_IN_OUT}
+        >
+            <div>
+                <Check size={85} className="text-green-500" />
+            </div>
+            <div className="flex flex-col justify-center items-center gap-3">
+                <p className="font-semibold text-xl">Room Reserved</p>
+                <div className="text-center flex flex-col gap-8">
+                    {!waitForApproval 
+                    ?   <p>Your booking has been sent to our staff and is approved, we have messaged you for further steps.</p>
+                    :   <p className="font-medium">Your booking has been sent to our staff and is waiting for approval, please be patient.</p>
+                    }    
+                    {!waitForApproval 
+                    ?   <button className="w-full bg-green-500 py-2 rounded-md font-semibold text-white">Go To Login Page</button>
+                    :   <button className="w-full bg-green-500 py-2 rounded-md font-semibold text-white">Go To Approval Status Page</button>
+                    }
                 </div>
             </div>
-        </>
+        </motion.div>
     )
 
     const BOOKING_FAILED_UI = state === "BOOKING_FAILED" &&
     (
-        <>
-            <div className="absolute z-10 text-neutral-50 flex flex-col justify-center items-center gap-2 bg-white/30 px-10 py-5 rounded-lg">
-                <div>
-                    <Check size={85} />
-                </div>
-                <div className="flex flex-col justify-center items-center gap-3">
-                    <p className="font-semibold text-xl">Failed to Reserve</p>
-                    <div className="text-center flex flex-col gap-8">
-                        <p className="font-medium">Your booking can't be sent to our staff, try again in a moment</p>
-                        <p>Retry</p>
-                    </div>
-
+        <motion.div 
+            key="BOOKING_FAILED_UI"
+            className="flex flex-col items-center w-full py-5 px-5"
+            {...FRAMER_SWIPE_IN_OUT}
+        >
+            <div>
+                <XIcon size={85} className="text-red-500" />
+            </div>
+            <div className="flex flex-col justify-center items-center gap-3">
+                <p className="font-semibold text-xl">Failed to Reserve</p>
+                <div className="text-center flex flex-col gap-8">
+                    <p className="font-medium">Your booking hasn't been sent to our staff. Wait a moment and try again!</p>
+                    <button className="w-full bg-red-500 py-2 rounded-md font-semibold text-white">Retry Booking</button>
                 </div>
             </div>
-        </>
+        </motion.div>
+    )
+
+    const NO_ROOM_UI = state === "NO_ROOM" &&
+    (
+        <motion.div 
+            key="NO_ROOM_UI"
+            className="flex flex-col items-center w-full py-8 px-5 gap-4"
+            {...FRAMER_SWIPE_IN_OUT}
+        >
+            <div>
+                <CircleQuestionMark size={85} />
+            </div>
+            <div className="flex flex-col justify-center items-center gap-3">
+                <p className="font-semibold text-xl">Room Not Found</p>
+                <div className="text-center flex flex-col gap-8">
+                    <p className="font-medium">This room doesn't appear to be on our end. Please contact admin for help!</p>
+                </div>
+            </div>
+        </motion.div>
     )
 
     return (
-        <section className="font-[Inter] min-w-screen min-h-screen flex justify-center md:items-center bg-neutral-900">
-            <canvas ref={canvasRef} className="fixed z-0 w-screen h-screen"></canvas>
+        <section className="font-[Inter] min-w-screen min-h-screen flex flex-col justify-center items-center bg-neutral-100 overflow-hidden">
+            <canvas ref={canvasRef} className="fixed top-0 z-0 w-screen h-screen opacity-60"></canvas>
+
+            <motion.div 
+                layout
+                transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 35,
+                    mass: 2.8
+                }}
+                className="z-100 bg-white/80 rounded-lg py-1 flex flex-col justify-center w-max mt-8"
+            >
+                <img src="/logo.svg" className="w-60" />
+            </motion.div>
 
             {/* middle card */}
-            <div className={`relative z-1 h-fit flex flex-col md:flex-row bg-white/75 shadow-md rounded-xl w-[90%] md:w-[75%] my-10`}>
-                {PAYMENT_LOADING_UI}
-                {BOOKING_SUCCESS_UI}
-                {FETCH_ROOM_UI}
-                {ROOM_OVERVIEW_UI}
-                {ROOM_RESERVATION_UI}
-                {ROOM_PAYMENT_UI}
-            </div>
+            <motion.div 
+                layout
+                transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    mass: 2
+                }}
+                className={`relative z-1 h-fit flex flex-col md:flex-row bg-white/75 shadow-md rounded-xl w-[90%] md:w-[75%] max-w-max my-10 `}
+            >
+                <AnimatePresence mode="popLayout">
+                    {NO_ROOM_UI}
+                    {PAYMENT_LOADING_UI}
+                    {BOOKING_SUCCESS_UI}
+                    {BOOKING_FAILED_UI}
+                    {FETCH_ROOM_UI}
+                    {ROOM_OVERVIEW_UI}
+                    {ROOM_RESERVATION_UI}
+                    {ROOM_PAYMENT_UI}
+                </AnimatePresence>
+            </motion.div>
         </section>
     )
 }
