@@ -21,6 +21,7 @@ export class BookingsService {
         const booking = await this.prisma.bookings.findUnique({
             where: { id: bookingId },
             select: {
+                room_id: true,
                 name: true,
                 phoneNumber: true,
                 duration: true,
@@ -40,6 +41,7 @@ export class BookingsService {
         if (!booking) throw new NotFoundException("booking data with id specified doesn't exist")
 
         return {
+            room_id: booking.room_id,
             name: maskData.maskStringV2(booking.name, {
                 unmaskedStartCharacters: 1,
                 unmaskedEndCharacters: 2
