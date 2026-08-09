@@ -134,6 +134,7 @@ model Bookings {
   autoApproveTime         Int?
   createdAt               DateTime                    @default(now())
   updatedAt               DateTime?                   @updatedAt
+  checkedInAt             DateTime?
 
   bookingRoom             Rooms                       @relation(fields: [room_id], references: [id], onDelete: Cascade)
   bookingsAddons          BookingsAddons[]
