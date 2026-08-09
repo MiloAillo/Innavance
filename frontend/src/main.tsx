@@ -4,9 +4,11 @@ import './index.css'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { Bookings } from './pages/bookings/booking'
 import "@fontsource/inter"
+import { ApprovalStatus } from './pages/approval-status/approvalStatus'
 
 const browserRouter = createBrowserRouter([
-  { path: "bookings/:id", element: <Bookings /> }
+  { path: "bookings/:id", element: <Bookings /> },
+  { path: "status/:id", element: <ApprovalStatus /> }
 ])
 
 createRoot(document.getElementById('root')!).render(

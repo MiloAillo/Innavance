@@ -28,3 +28,12 @@ export const postReservation = async ({ room_id, full_name, phone_number, paymen
         return Promise.reject(err)
     }
 }
+    
+export const getBookingDetail = async (id: number | string) => {
+    try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/bookings/${id}`)
+        return res.data
+    } catch (err) {
+        return Promise.reject(err)
+    }
+}

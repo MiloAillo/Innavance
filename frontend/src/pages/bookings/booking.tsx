@@ -5,7 +5,7 @@ import { getRoomDetail } from "../../API/rooms-api";
 import type { RoomDetail } from "../../types/room-detail.type";
 import { Check, CircleQuestionMark, Coins, Loader2Icon, WalletCards, XIcon } from "lucide-react";
 import { AddonCounter } from "../../components/addon-counter";
-import { motion, AnimatePresence, spring, scale } from "framer-motion"
+import { motion, AnimatePresence, spring } from "framer-motion"
 import { postReservation } from "../../API/bookings-api";
 import type { AddonType } from "../../types/post-reservation.type";
 import type { BookingResponse } from "../../types/booking-response.type";
@@ -496,7 +496,7 @@ export function Bookings(): JSX.Element {
                     }    
                     {!waitForApproval 
                     ?   <button className="w-full bg-green-500 py-2 rounded-md font-semibold text-white">Go To Login Page</button>
-                    :   <button className="w-full bg-green-500 py-2 rounded-md font-semibold text-white">Go To Approval Status Page</button>
+                    :   <button onClick={() => window.location.href = `/status/${bookingId}`} className="w-full bg-green-500 py-2 rounded-md font-semibold text-white">Go To Approval Status Page</button>
                     }
                 </div>
             </div>
