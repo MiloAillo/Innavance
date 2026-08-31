@@ -3,8 +3,19 @@
 
 // admin table value after initialized
 export const admin_is_auto_approve = true;
-export const admin_auto_approve_time = 10;
-export const admin_smart_door_default_pin = '157359';
+export const admin_auto_approve_time = 0;
+export const admin_smart_door_default_pin = '000000';
+export const admin_checkout_grace_period = 3;
+export const admin_staff_allowed_to_approve = true;
+export const admin_staff_allowed_to_force_checkout = true;
+export const admin_staff_allowed_to_dismiss_call = true;
+export const admin_qr_instructions = [
+  'Scan the QR code to book the room',
+  'Enter the room PIN code we sent to your number',
+  'Login to the room dashboard and enjoy the room',
+  'Before leaving, click checkout ',
+  'Go to the front desk to finalize payment',
+];
 export const addons_data = [
   {
     addon: 'Extra Bed',
@@ -30,69 +41,62 @@ export const addons_data = [
 export const rooms_data = [
   {
     name: 'VIP Space',
-    price: 83000,
+    price: 308137,
     capacity: 4,
     description:
       'An exceptional luxury suite designed for top-tier comfort and productivity. Features premium amenities, smart tech integration, and dedicated executive living space ideal for guests seeking an elevated stay.',
     addons: [1, 2, 3, 4],
     features: [
-      'King-sized Premium Bed',
-      'Private Ensuite Bathroom & Water Heater',
-      'Smart Door Access & Keyless Entry',
-      'High-Speed Wi-Fi (up to 100 Mbps)',
-      'Dedicated Executive Desk & Ergonomic Chair',
-      '50-inch Smart TV with Streaming Services',
-      'Mini Refrigerator & Coffee Machine',
-      'Air Conditioning with Climate Control',
+      'Double Bed',
+      'Bathroom with Bathub & Heater',
+      'Air Conditioning',
+      'Super Fast Wifi Access',
+      'Dedicated Storage Room',
+      'Smart TV',
     ],
   },
   {
     name: 'Golden Space',
-    price: 63000,
+    price: 274542,
     capacity: 4,
     description:
       'A spacious and modern room balancing comfort with premium convenience. Perfect for small groups or travelers who want private facilities, high-speed connectivity, and full air conditioning.',
     addons: [1, 2, 3, 4],
     features: [
-      'Queen-sized Comfortable Bed',
-      'Private Bathroom & Shower',
-      'Smart Door Access',
-      'High-Speed Wi-Fi',
-      'Work Desk & Standard Chair',
+      'Double Bed',
+      'Bathroom with Heater',
       'Air Conditioning',
-      'Wardrobe & Storage Cabinet',
+      'Dedicated Wifi Access',
+      'Multi Shelves Closet',
+      'Smart TV',
     ],
   },
   {
     name: 'Basic Space',
-    price: 40000,
+    price: 227233,
     capacity: 2,
     description:
       'A cozy and practical accommodation option tailored for budget-conscious guests. Offers essential comforts including air conditioning, reliable Wi-Fi, and a dedicated workspace.',
     addons: [2, 3, 4],
     features: [
-      'Single Size Comfort Bed',
-      'Shared Bathroom Access',
-      'Standard Wi-Fi Access',
-      'Compact Work Desk & Chair',
+      'Single Bed',
+      'Private Bathroom',
       'Air Conditioning',
-      'Clothes Rack',
+      'Standard Closet',
     ],
   },
   {
     name: 'Student Space',
-    price: 26000,
+    price: 213688,
     capacity: 2,
     description:
       'An ultra-affordable, functional living unit geared towards students and solo travelers. Comes with dedicated study furniture, personal secure storage, and shared amenities.',
     addons: [2],
     features: [
       'Single Bed',
-      'Shared Bathroom Access',
-      'Standard Wi-Fi Access',
       'Study Desk & Chair',
       'Standing Fan',
-      'Personal Storage Locker',
+      'Standard Closet',
     ],
   },
 ];
