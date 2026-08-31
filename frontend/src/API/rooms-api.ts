@@ -9,3 +9,12 @@ export const getRoomDetail = async (id: number | string) => {
         return Promise.reject(err)        
     }
 }
+
+export const getRoomList = async () => {
+    try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rooms`)
+        return res.data
+    } catch (err) {
+        return Promise.reject(err)
+    }
+}

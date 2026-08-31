@@ -10,6 +10,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { MetricsService } from './metrics.service';
 import { AdminsDashboardModule } from './admins/dashboard/admins-dashboard.module';
 import { WebsocketModule } from './websocket/websocket.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { WebsocketModule } from './websocket/websocket.module';
     RoomsModule,
     BookingsModule,
     AdminsDashboardModule,
+    DashboardModule,
     WebsocketModule,
   ],
   controllers: [],

@@ -14,6 +14,22 @@ export class DashboardService {
             where: { booking_id: request.data.bookings[0].id }
         })
 
+        // grab the booking addons with addon details
+        const bookingAddons = await this.prisma.bookingsAddons.findMany({
+            where: { booking_id: request.data.bookings[0].id },
+            include: {
+                addonAddon: true
+            }
+        })
+
+        // format addons response
+        const addons = bookingAddons.map((bookingAddon) => ({
+            id: bookingAddon.addonAddon.id,
+            name: bookingAddon.addonAddon.addon,
+            count: bookingAddon.count,
+            price: bookingAddon.addonAddon.price
+        }))
+
         return {
             room: {
                 id: request.data.id,
@@ -40,7 +56,9 @@ export class DashboardService {
                 duration: request.data.bookings[0].duration,
                 price: request.data.bookings[0].price,
                 payment_method: request.data.bookings[0].paymentMethod,
+                checked_in_at: request.data.bookings[0].checkedInAt,
             },
+            addons: addons,
             notifications: request.data.bookings[0].bookingsNotifications,
             notificationsCount: notificationsCount
         }

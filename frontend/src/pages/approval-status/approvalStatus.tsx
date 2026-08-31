@@ -84,6 +84,16 @@ export function ApprovalStatus(): JSX.Element {
         </motion.div>
     )
 
+    const NO_STATUS_UI = state === "NO_STATUS" &&
+    (
+        <motion.div 
+            key="NO_STATUS_UI"
+            {...FRAMER_ANIMATION}
+        >
+            <p className="font-semibold text-center">Hmm... We can't find this specific booking detail. If you think this is a mistake, please contact our staff.</p>
+        </motion.div>
+    )
+
     const STATUS_FETCHED_UI = state === "STATUS_FETCHED" &&
     (
         <motion.div 
@@ -145,16 +155,6 @@ export function ApprovalStatus(): JSX.Element {
         </motion.div>
     )
 
-    const NO_STATUS_UI = state === "NO_STATUS" &&
-    (
-        <motion.div 
-            key="NO_STATUS_UI"
-            {...FRAMER_ANIMATION}
-        >
-            <p className="font-semibold text-center">Hmm... We can't find this specific booking detail. If you think this is a mistake, please contact our staff.</p>
-        </motion.div>
-    )
-
     return (
         <section className="bg-neutral-100 flex justify-center items-center w-screen min-h-screen flex-col gap-5">
             <motion.nav 
@@ -177,7 +177,7 @@ export function ApprovalStatus(): JSX.Element {
                 </AnimatePresence>
             </motion.div>
 
-            <p className="font-semibold text-neutral-500">go to the <a onClick={() => window.location.href = `/login/${bookingData?.room_id}`} className="text-blue-500 underline cursor-pointer">dashboard login page</a></p>
+            <p className="font-semibold text-neutral-500">go to the <a onClick={() => window.location.href = `/login/user/${bookingData?.room_id}`} className="text-blue-500 underline cursor-pointer">dashboard login page</a></p>
 
             <footer className="absolute bottom-0 w-full bg-neutral-600 flex justify-around py-3 text-white underline text-sm font-light">
                 <a>Admin contact</a>

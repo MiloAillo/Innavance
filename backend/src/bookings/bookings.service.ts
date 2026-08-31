@@ -261,7 +261,10 @@ export class BookingsService {
         // change whose on_hold in that room to checked in
         await this.prisma.bookings.update({
             where: { id: booking_id },
-            data: { status: "checked_in" }
+            data: { 
+                status: "checked_in",
+                checkedInAt: new Date()
+            }
         })
 
         // update the room accountId and door pin
