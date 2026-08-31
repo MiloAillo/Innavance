@@ -28,6 +28,7 @@ interface MetricsData {
   smartDoorIsOpened: boolean;
   electricityOutput: number;
   waterOutput: number;
+  isInnkeeperCalled: boolean;
 }
 
 @WebSocketGateway({
@@ -37,12 +38,17 @@ interface MetricsData {
   namespace: 'metrics',
 })
 @Injectable()
-export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class MetricsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server!: Server;
 
   private readonly logger = new Logger(MetricsGateway.name);
-  private readonly connectedClients = new Map<string, { socket: Socket; payload: JwtPayload }>();
+  private readonly connectedClients = new Map<
+    string,
+    { socket: Socket; payload: JwtPayload }
+  >();
   private readonly updateIntervals = new Map<string, NodeJS.Timeout>();
 
   constructor(
@@ -60,18 +66,18 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
       }
 
       let payload: JwtPayload;
-      
+
       try {
         // First try to verify as JWT (for admins)
         const verifiedPayload = this.jwtService.verify<AdminJwtPayload>(token, {
           secret: this.configService.get<string>('JWT_SECRET'),
         });
-        
+
         // Validate admin payload structure
         if (!this.isValidAdminPayload(verifiedPayload)) {
           throw new UnauthorizedException('Invalid admin token structure');
         }
-        
+
         payload = verifiedPayload;
       } catch (jwtError) {
         // If JWT verification fails, treat as plain accountId (for users)
@@ -80,7 +86,7 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
         if (!isValidAccountId) {
           throw new UnauthorizedException('Invalid accountId');
         }
-        
+
         payload = {
           accountId: token,
           type: 'user',
@@ -88,14 +94,15 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
       }
 
       this.connectedClients.set(client.id, { socket: client, payload });
-      this.logger.log(`Client connected: ${client.id}, user: ${this.getUserIdentifier(payload)}`);
+      this.logger.log(
+        `Client connected: ${client.id}, user: ${this.getUserIdentifier(payload)}`,
+      );
 
       // Send initial metrics based on user type
       await this.sendInitialMetrics(client, payload);
-      
+
       // Start periodic updates
       this.startPeriodicUpdates(client, payload);
-
     } catch (error: any) {
       this.logger.error(`Connection error: ${error.message}`);
       client.disconnect();
@@ -105,9 +112,11 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
   handleDisconnect(client: Socket) {
     const clientData = this.connectedClients.get(client.id);
     if (clientData) {
-      this.logger.log(`Client disconnected: ${client.id}, user: ${this.getUserIdentifier(clientData.payload)}`);
+      this.logger.log(
+        `Client disconnected: ${client.id}, user: ${this.getUserIdentifier(clientData.payload)}`,
+      );
       this.connectedClients.delete(client.id);
-      
+
       // Clear update interval
       const intervalId = this.updateIntervals.get(client.id);
       if (intervalId) {
@@ -118,14 +127,15 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
   }
 
   private extractTokenFromSocket(client: Socket): string | null {
-    let token = client.handshake.auth?.token || client.handshake.headers?.authorization;
+    let token =
+      client.handshake.auth?.token || client.handshake.headers?.authorization;
     if (!token) return null;
-    
+
     // Remove 'Bearer ' prefix if present
     if (token.startsWith('Bearer ')) {
       token = token.substring(7);
     }
-    
+
     return token;
   }
 
@@ -138,7 +148,9 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
         metrics = await this.getAllRoomsMetrics();
       } else if (this.isUserAccountIdPayload(payload)) {
         // User: get their specific room
-        const roomMetric = await this.getRoomMetricsByAccountId(payload.accountId);
+        const roomMetric = await this.getRoomMetricsByAccountId(
+          payload.accountId,
+        );
         if (roomMetric) {
           metrics = [roomMetric];
         }
@@ -161,20 +173,32 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
         smartDoorIsOpened: true,
         electricityOutput: true,
         waterOutput: true,
+        bookings: {
+          where: {
+            status: 'checked_in',
+          },
+          select: {
+            isInnkeeperCalled: true,
+          },
+          take: 1,
+        },
       },
     });
 
-    return rooms.map(room => ({
+    return rooms.map((room) => ({
       roomId: room.id,
       accountId: room.accountId,
       smartDoorIsLocked: room.smartDoorIsLocked,
       smartDoorIsOpened: room.smartDoorIsOpened,
       electricityOutput: room.electricityOutput,
       waterOutput: room.waterOutput,
+      isInnkeeperCalled: room.bookings[0]?.isInnkeeperCalled ?? false,
     }));
   }
 
-  private async getRoomMetricsByAccountId(accountId: string): Promise<MetricsData | null> {
+  private async getRoomMetricsByAccountId(
+    accountId: string,
+  ): Promise<MetricsData | null> {
     const room = await this.prisma.rooms.findFirst({
       where: { accountId },
       select: {
@@ -184,6 +208,15 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
         smartDoorIsOpened: true,
         electricityOutput: true,
         waterOutput: true,
+        bookings: {
+          where: {
+            status: 'checked_in',
+          },
+          select: {
+            isInnkeeperCalled: true,
+          },
+          take: 1,
+        },
       },
     });
 
@@ -196,20 +229,27 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
       smartDoorIsOpened: room.smartDoorIsOpened,
       electricityOutput: room.electricityOutput,
       waterOutput: room.waterOutput,
+      isInnkeeperCalled: room.bookings[0]?.isInnkeeperCalled ?? false,
     };
   }
 
   private isValidAdminPayload(payload: any): payload is AdminJwtPayload {
-    return payload && 
-           typeof payload.id === 'number' && 
-           typeof payload.username === 'string' && 
-           (payload.type === 'manager' || payload.type === 'staff');
+    return (
+      payload &&
+      typeof payload.id === 'number' &&
+      typeof payload.username === 'string' &&
+      (payload.type === 'manager' || payload.type === 'staff')
+    );
   }
 
-  private isUserAccountIdPayload(payload: any): payload is { accountId: string; type: 'user' } {
-    return payload && 
-           typeof payload.accountId === 'string' && 
-           payload.type === 'user';
+  private isUserAccountIdPayload(
+    payload: any,
+  ): payload is { accountId: string; type: 'user' } {
+    return (
+      payload &&
+      typeof payload.accountId === 'string' &&
+      payload.type === 'user'
+    );
   }
 
   private async validateAccountId(accountId: string): Promise<boolean> {
@@ -242,7 +282,9 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
           metrics = await this.getAllRoomsMetrics();
         } else if (this.isUserAccountIdPayload(payload)) {
           // User: get their specific room
-          const roomMetric = await this.getRoomMetricsByAccountId(payload.accountId);
+          const roomMetric = await this.getRoomMetricsByAccountId(
+            payload.accountId,
+          );
           if (roomMetric) {
             metrics = [roomMetric];
           }
@@ -285,7 +327,9 @@ export class MetricsGateway implements OnGatewayConnection, OnGatewayDisconnect 
       }
     } else if (this.isUserAccountIdPayload(payload)) {
       // User can only get their own room
-      const roomMetric = await this.getRoomMetricsByAccountId(payload.accountId);
+      const roomMetric = await this.getRoomMetricsByAccountId(
+        payload.accountId,
+      );
       if (roomMetric) {
         metrics = [roomMetric];
       }

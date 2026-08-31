@@ -6,140 +6,153 @@ import { NotificationQueryDto } from './dto/notification-query.dto';
 
 @Injectable()
 export class DashboardService {
-    constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-    async view(request: RequestWithRoomData) {
-        // grab the notification count
-        const notificationsCount = await this.prisma.bookingsNotifications.count({
-            where: { booking_id: request.data.bookings[0].id }
-        })
+  async view(request: RequestWithRoomData) {
+    // grab the notification count
+    const notificationsCount = await this.prisma.bookingsNotifications.count({
+      where: { booking_id: request.data.bookings[0].id },
+    });
 
-        // grab the booking addons with addon details
-        const bookingAddons = await this.prisma.bookingsAddons.findMany({
-            where: { booking_id: request.data.bookings[0].id },
-            include: {
-                addonAddon: true
-            }
-        })
+    // grab the booking addons with addon details
+    const bookingAddons = await this.prisma.bookingsAddons.findMany({
+      where: { booking_id: request.data.bookings[0].id },
+      include: {
+        addonAddon: true,
+      },
+    });
 
-        // format addons response
-        const addons = bookingAddons.map((bookingAddon) => ({
-            id: bookingAddon.addonAddon.id,
-            name: bookingAddon.addonAddon.addon,
-            count: bookingAddon.count,
-            price: bookingAddon.addonAddon.price
-        }))
+    // format addons response
+    const addons = bookingAddons.map((bookingAddon) => ({
+      id: bookingAddon.addonAddon.id,
+      name: bookingAddon.addonAddon.addon,
+      count: bookingAddon.count,
+      price: bookingAddon.addonAddon.price,
+    }));
 
-        return {
-            room: {
-                id: request.data.id,
-                name: request.data.name,
-                price: request.data.price,
-                capacity: request.data.capacity,
-                description: request.data.description,
-            },
-            metrics: {
-                is_addon_served: request.data.bookings[0].isAddonServed,
-                is_innkeeper_called: request.data.bookings[0].isInnkeeperCalled,
-                checkout_grace_time: request.data.bookings[0].checkoutGraceTime,
-                created_at: request.data.bookings[0].createdAt,
-                updated_at: request.data.bookings[0].updatedAt,
-                smart_door_is_locked: request.data.smartDoorIsLocked,
-                smart_door_is_opened: request.data.smartDoorIsOpened,
-                water_output: request.data.waterOutput,
-                electricity_output: request.data.electricityOutput
-            },
-            booking: {
-                id: request.data.bookings[0].id,
-                status: request.data.bookings[0].status,
-                name: request.data.bookings[0].name,
-                duration: request.data.bookings[0].duration,
-                price: request.data.bookings[0].price,
-                payment_method: request.data.bookings[0].paymentMethod,
-                checked_in_at: request.data.bookings[0].checkedInAt,
-            },
-            addons: addons,
-            notifications: request.data.bookings[0].bookingsNotifications,
-            notificationsCount: notificationsCount
-        }
+    return {
+      room: {
+        id: request.data.id,
+        name: request.data.name,
+        price: request.data.price,
+        capacity: request.data.capacity,
+        description: request.data.description,
+      },
+      metrics: {
+        is_addon_served: request.data.bookings[0].isAddonServed,
+        is_innkeeper_called: request.data.bookings[0].isInnkeeperCalled,
+        checkout_grace_time: request.data.bookings[0].checkoutGraceTime,
+        created_at: request.data.bookings[0].createdAt,
+        updated_at: request.data.bookings[0].updatedAt,
+        smart_door_is_locked: request.data.smartDoorIsLocked,
+        smart_door_is_opened: request.data.smartDoorIsOpened,
+        water_output: request.data.waterOutput,
+        electricity_output: request.data.electricityOutput,
+      },
+      booking: {
+        id: request.data.bookings[0].id,
+        status: request.data.bookings[0].status,
+        name: request.data.bookings[0].name,
+        duration: request.data.bookings[0].duration,
+        price: request.data.bookings[0].price,
+        payment_method: request.data.bookings[0].paymentMethod,
+        checked_in_at: request.data.bookings[0].checkedInAt,
+      },
+      addons: addons,
+      notifications: request.data.bookings[0].bookingsNotifications,
+      notificationsCount: notificationsCount,
+    };
+  }
+
+  async callInnkeeper(
+    callInnkeeperDto: CallInnkeeperDto,
+    request: RequestWithRoomData,
+  ) {
+    // throw error if the value requested already met
+    if (request.data.bookings[0].isInnkeeperCalled === callInnkeeperDto.value) {
+      throw new BadRequestException('value requested already met');
     }
 
-    async callInnkeeper(callInnkeeperDto: CallInnkeeperDto, request: RequestWithRoomData) {
-        // throw error if the value requested already met
-        if (request.data.bookings[0].isInnkeeperCalled === callInnkeeperDto.value) {
-            throw new BadRequestException("value requested already met")
-        }
+    // change booking isInnkeeperCalled value to the requested value
+    await this.prisma.bookings.update({
+      where: { id: request.data.bookings[0].id },
+      data: { isInnkeeperCalled: callInnkeeperDto.value },
+    });
 
-        // change booking isInnkeeperCalled value to the requested value
-        await this.prisma.bookings.update({
-            where: { id: request.data.bookings[0].id },
-            data: { isInnkeeperCalled: callInnkeeperDto.value }
-        })
-        
-        if (callInnkeeperDto.value) {
-            // create web notifications 
-            await this.prisma.bookingsNotifications.create({
-                data: {
-                    booking_id: request.data.bookings[0].id,
-                    type: "important",
-                    title: "Innkeeper has been called",
-                    description: "Don't go anywhere, Innkeeper will arrive at your door shortly."
-                }
-            })
-        }
+    if (callInnkeeperDto.value) {
+      // create web notifications
+      await this.prisma.bookingsNotifications.create({
+        data: {
+          booking_id: request.data.bookings[0].id,
+          type: 'important',
+          title: 'Innkeeper has been called',
+          description:
+            "Don't go anywhere, Innkeeper will arrive at your door shortly.",
+        },
+      });
     }
+  }
 
-    async getNotifications(notificationQueryDto: NotificationQueryDto, request: RequestWithRoomData) {
-        const { page = 1, limit = 10, order_by = 'createdAt', order = 'desc', filter_type = ['info', 'important', 'warning'] } = notificationQueryDto
+  async getNotifications(
+    notificationQueryDto: NotificationQueryDto,
+    request: RequestWithRoomData,
+  ) {
+    const {
+      page = 1,
+      limit = 10,
+      order_by = 'createdAt',
+      order = 'desc',
+      filter_type = ['info', 'important', 'warning'],
+    } = notificationQueryDto;
 
-        // build a pagination system
-        const skip = (page - 1) * limit    // calculate how many to skip
+    // build a pagination system
+    const skip = (page - 1) * limit; // calculate how many to skip
 
-        // dynamic variable for ordering rooms data
-        const dataOrder = { [order_by]: order }
+    // dynamic variable for ordering rooms data
+    const dataOrder = { [order_by]: order };
 
-        // grab the notifications and their total count
-        const [ notifications, notificationsTotalCount ] = await Promise.all([
-            this.prisma.bookingsNotifications.findMany({
-                where: { 
-                    booking_id: request.data.bookings[0].id,
-                    type: {
-                        in: filter_type
-                    }
-                },
-                skip: skip,
-                take: limit,
-                orderBy: dataOrder,
-                select: {
-                    id: true,
-                    type: true,
-                    title: true,
-                    description: true,
-                    createdAt: true
-                }
-            }),
-            // fetch total notification
-            this.prisma.bookingsNotifications.count({
-                where: { 
-                    booking_id: request.data.bookings[0].id,
-                    type: {
-                        in: filter_type
-                    }
-                }
-            }),
-        ])
+    // grab the notifications and their total count
+    const [notifications, notificationsTotalCount] = await Promise.all([
+      this.prisma.bookingsNotifications.findMany({
+        where: {
+          booking_id: request.data.bookings[0].id,
+          type: {
+            in: filter_type,
+          },
+        },
+        skip: skip,
+        take: limit,
+        orderBy: dataOrder,
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          description: true,
+          createdAt: true,
+        },
+      }),
+      // fetch total notification
+      this.prisma.bookingsNotifications.count({
+        where: {
+          booking_id: request.data.bookings[0].id,
+          type: {
+            in: filter_type,
+          },
+        },
+      }),
+    ]);
 
-        return {
-            notifications,
-            meta: {
-                total: notificationsTotalCount,
-                page,
-                order,
-                order_by,
-                has_page_before: page !== 1,
-                has_page_after: skip + limit < notificationsTotalCount,
-                page_end: Math.ceil(notificationsTotalCount / limit)
-            }
-        }
-    }
+    return {
+      notifications,
+      meta: {
+        total: notificationsTotalCount,
+        page,
+        order,
+        order_by,
+        has_page_before: page !== 1,
+        has_page_after: skip + limit < notificationsTotalCount,
+        page_end: Math.ceil(notificationsTotalCount / limit),
+      },
+    };
+  }
 }

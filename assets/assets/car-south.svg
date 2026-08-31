@@ -1,0 +1,17 @@
+<svg width="40" height="60" viewBox="0 0 40 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Body -->
+  <rect x="5" y="10" width="30" height="35" rx="3" fill="#e74c3c"/>
+  <!-- Windshield -->
+  <rect x="8" y="30" width="24" height="12" rx="2" fill="#ec7063"/>
+  <!-- Roof -->
+  <rect x="10" y="42" width="20" height="8" rx="2" fill="#c0392b"/>
+  <!-- Windows -->
+  <rect x="8" y="17" width="10" height="8" fill="#ec7063"/>
+  <rect x="22" y="17" width="10" height="8" fill="#ec7063"/>
+  <!-- Wheels -->
+  <circle cx="12" cy="8" r="4" fill="#2c3e50"/>
+  <circle cx="28" cy="8" r="4" fill="#2c3e50"/>
+  <!-- Headlights -->
+  <rect x="8" y="5" width="6" height="3" fill="#f1c40f"/>
+  <rect x="26" y="5" width="6" height="3" fill="#f1c40f"/>
+</svg>

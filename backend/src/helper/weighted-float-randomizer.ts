@@ -1,16 +1,16 @@
 interface WeightedRange {
-  range: [number, number]
-  weight: number
+  range: [number, number];
+  weight: number;
 }
 
 export function floatRandomizer(ranges: WeightedRange[]): number {
   if (!ranges || ranges.length === 0) {
-    throw new Error('Ranges array cannot be empty')
+    throw new Error('Ranges array cannot be empty');
   }
 
   // 1. Calculate total weight sum across all ranges
   const totalWeight = ranges.reduce((sum, r) => sum + r.weight, 0);
-  
+
   if (totalWeight <= 0) {
     throw new Error('Total weight must be greater than 0');
   }
@@ -20,7 +20,7 @@ export function floatRandomizer(ranges: WeightedRange[]): number {
 
   // 3. Find which range was selected
   let selectedRange: [number, number] = ranges[0].range;
-  
+
   for (const item of ranges) {
     if (randomWeight < item.weight) {
       selectedRange = item.range;

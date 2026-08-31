@@ -7,12 +7,13 @@ import { AdminDasboardProcessor } from './admins-dashboard.processor';
 
 @Module({
   imports: [
-    BullModule.registerQueue({      // register bullMQ queue
-      name: 'admin-booking-queue'
+    BullModule.registerQueue({
+      // register bullMQ queue
+      name: 'admin-booking-queue',
     }),
-    AdminsAuthModule
+    AdminsAuthModule,
   ],
   providers: [AdminsDashboardService, AdminDasboardProcessor],
-  controllers: [AdminsDashboardController]
+  controllers: [AdminsDashboardController],
 })
 export class AdminsDashboardModule {}

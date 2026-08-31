@@ -18,11 +18,12 @@ model Admin {
   id                              Int                      @id @default(autoincrement())
   isAutoApprove                   Boolean
   autoApproveTime                 Int
-  smartDoorDefaultPin             Int
+  smartDoorDefaultPin             String @db.VarChar(6)
   checkOutGracePeriod             Int                      @default(60)
   isStaffAllowedToApprove         Boolean                  @default(true)
   isStaffAllowedToForceCheckout   Boolean                  @default(false)
   isStaffAllowedToDismissCall     Boolean               @default(true)
+  qrInstructions                  Json                     @default("[]")
 
   notifications         AdminNotifications[]
   users                 AdminUsers[]
@@ -76,7 +77,7 @@ model Rooms {
   capacity            Int
   description         String @db.Text
   isAvailable         Boolean                   @default(true)
-  smartDoorPin        Int                       @default(157359)
+  smartDoorPin        String @db.VarChar(6)      @default("157359")
   smartDoorIsLocked   Boolean
   smartDoorIsOpened   Boolean
   electricityOutput   Float
@@ -135,6 +136,7 @@ model Bookings {
   createdAt               DateTime                    @default(now())
   updatedAt               DateTime?                   @updatedAt
   checkedInAt             DateTime?
+  checkedOutAt            DateTime?
 
   bookingRoom             Rooms                       @relation(fields: [room_id], references: [id], onDelete: Cascade)
   bookingsAddons          BookingsAddons[]

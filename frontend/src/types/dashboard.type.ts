@@ -1,9 +1,9 @@
 export interface DashboardMetrics {
     is_addon_served: boolean;
     is_innkeeper_called: boolean;
-    checkout_grace_time: Date;
+    checkout_grace_time: number | null;
     created_at: Date;
-    updated_at: Date;
+    updated_at: Date | null;
     smart_door_is_locked: boolean;
     smart_door_is_opened: boolean;
     water_output: number;

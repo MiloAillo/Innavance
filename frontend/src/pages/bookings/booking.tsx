@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import type { JSX } from "react/jsx-runtime";
 import { getRoomDetail } from "../../API/rooms-api";
 import type { RoomDetail } from "../../types/room-detail.type";
-import { Check, CircleQuestionMark, Coins, Loader2Icon, WalletCards, XIcon } from "lucide-react";
+import { Check, CircleQuestionMark, Coins, Loader2Icon, WalletCards, XIcon, ArrowLeft } from "lucide-react";
 import { AddonCounter } from "../../components/addon-counter";
 import { motion, AnimatePresence, spring } from "framer-motion"
 import { postReservation } from "../../API/bookings-api";
@@ -172,6 +172,15 @@ export function Bookings(): JSX.Element {
     const FIRST_CARD = (
         <>
             <div className="flex-1 flex flex-col justify-between gap-3 p-5">
+                {state === "ROOM_RESERVATION" && (
+                    <button
+                        onClick={() => setState("ROOM_OVERVIEW")}
+                        className="flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-800 w-fit"
+                    >
+                        <ArrowLeft size={16} />
+                        Back to overview
+                    </button>
+                )}
                 <div className="flex flex-col gap-3">
                     {/* title and small cards */}
                     <div className="flex flex-col gap-3">
@@ -313,7 +322,17 @@ export function Bookings(): JSX.Element {
                                     onChange={(e) => setAgreedToTerms(e.target.checked)}
                                     className="w-4 h-4 cursor-pointer"
                                 />
-                                <span className="text-sm">I agree to the terms and conditions</span>
+                                <span className="text-sm">
+                                    I have read the{" "}
+                                    <a 
+                                        href="/rules?from=booking" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-green-600 hover:text-green-700 underline"
+                                    >
+                                        room rules
+                                    </a>
+                                </span>
                             </label>
                             <button 
                                 onClick={() => setState("ROOM_PAYMENT")} 
@@ -336,21 +355,28 @@ export function Bookings(): JSX.Element {
     const FOURTH_CARD = (
         <>
             <div className="flex-1 flex flex-col gap-6 p-5">
+                <button
+                    onClick={() => setState("ROOM_RESERVATION")}
+                    className="flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-800 w-fit"
+                >
+                    <ArrowLeft size={16} />
+                    Back
+                </button>
                 <p className="font-bold text-2xl">{roomData?.name}</p>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <p className="font-semibold text-base text-neutral-700 mb-2">Full Name</p>
-                        <p className="text-base">{fullName}</p>
-                    </div>
+                        <div>
+                            <p className="font-semibold text-base text-neutral-700 mb-2">Full Name</p>
+                            <p className="text-base">{fullName}</p>
+                        </div>
 
-                    <div>
-                        <p className="font-semibold text-base text-neutral-700 mb-2">Phone Number</p>
-                        <p className="text-base">{phoneNumber}</p>
-                    </div>
+                        <div>
+                            <p className="font-semibold text-base text-neutral-700 mb-2">Phone Number</p>
+                            <p className="text-base">{phoneNumber}</p>
+                        </div>
 
-                    <div>
-                        <p className="font-semibold text-base text-neutral-700 mb-2">Booking Duration</p>
+                        <div>
+                            <p className="font-semibold text-base text-neutral-700 mb-2">Booking Duration</p>
                         <p className="text-base">{duration} {duration === 1 ? 'day' : 'days'}</p>
                     </div>
                 </div>
@@ -495,7 +521,7 @@ export function Bookings(): JSX.Element {
                     :   <p className="font-medium">Your booking has been sent to our staff and is waiting for approval, please be patient.</p>
                     }    
                     {!waitForApproval 
-                    ?   <button className="w-full bg-green-500 py-2 rounded-md font-semibold text-white">Go To Login Page</button>
+                    ?   <a href="/login" className="w-full bg-green-500 py-2 rounded-md font-semibold text-white block text-center">Go To Login Page</a>
                     :   <button onClick={() => window.location.href = `/status/${bookingId}`} className="w-full bg-green-500 py-2 rounded-md font-semibold text-white">Go To Approval Status Page</button>
                     }
                 </div>
@@ -517,7 +543,20 @@ export function Bookings(): JSX.Element {
                 <p className="font-semibold text-xl">Failed to Reserve</p>
                 <div className="text-center flex flex-col gap-8">
                     <p className="font-medium">Your booking hasn't been sent to our staff. Wait a moment and try again!</p>
-                    <button className="w-full bg-red-500 py-2 rounded-md font-semibold text-white">Retry Booking</button>
+                    <button 
+                        onClick={() => {
+                            setFullName("")
+                            setPhoneNumber("")
+                            setDuration(1)
+                            setAddonCounts({})
+                            setAgreedToTerms(false)
+                            setPaymentMethod("")
+                            setState("ROOM_RESERVATION")
+                        }}
+                        className="w-full bg-red-500 py-2 rounded-md font-semibold text-white"
+                    >
+                        Retry Booking
+                    </button>
                 </div>
             </div>
         </motion.div>

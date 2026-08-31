@@ -6,9 +6,10 @@ import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
-    BullModule.registerQueue({      // register bullMQ queue
-      name: 'booking-queue'
-    })
+    BullModule.registerQueue({
+      // register bullMQ queue
+      name: 'booking-queue',
+    }),
   ],
   controllers: [BookingsController],
   providers: [BookingsService, BookingsProcessor],
