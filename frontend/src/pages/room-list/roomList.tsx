@@ -49,7 +49,7 @@ export function RoomList(): JSX.Element {
           transition={{ type: "spring", stiffness: 300, damping: 30, mass: 1 }}
           className="mb-5"
         >
-          <p className="font-semibold text-xl text-neutral-800">
+          <p className="font-bold text-2xl text-neutral-800">
             Choose a room
           </p>
           <p className="mt-1 text-sm text-neutral-600">

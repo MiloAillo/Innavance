@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient, Addons, Rooms } from "../src/generated/prisma/client";
 import { 
   addons_data, 
   admin_auto_approve_time, 
@@ -126,7 +126,7 @@ async function main() {
 
   console.log("Seeding addons...");
   // Create addons for rooms
-  const createdAddons = [];
+  const createdAddons: Addons[] = [];
   for (const data of addons_data) {
     const addon = await prisma.addons.create({
       data: {
@@ -141,7 +141,7 @@ async function main() {
 
   console.log("Seeding rooms with features and addons...");
   // Create rooms, rooms features, and rooms addons
-  const createdRooms = [];
+  const createdRooms: Rooms[] = [];
   for (let roomIndex = 0; roomIndex < rooms_data.length; roomIndex++) {
     const data = rooms_data[roomIndex];
     const room = await prisma.rooms.create({

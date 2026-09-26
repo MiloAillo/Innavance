@@ -15,10 +15,10 @@ export function LoginSelection(): JSX.Element {
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 30, mass: 2 }}
-          className="mx-7 flex w-full max-w-md flex-col gap-5 rounded-lg bg-white px-5 py-6 shadow md:mx-10"
+          className="mx-7 flex w-full md:max-w-lg flex-col gap-5 rounded-lg bg-white px-5 py-6 shadow md:mx-10"
         >
           <div className="text-center">
-            <h1 className="text-xl font-semibold text-neutral-600">
+            <h1 className="text-xl font-bold text-neutral-600">
               Sign in to Innavance
             </h1>
             <p className="mt-1 text-sm text-neutral-600">

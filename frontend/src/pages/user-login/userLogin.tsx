@@ -126,7 +126,7 @@ export function UserLogin(): JSX.Element {
       {...FRAMER_ANIMATION}
     >
       <div className="flex flex-col items-center gap-1">
-        <p className="font-semibold text-xl text-neutral-600">
+        <p className="font-semibold text-xl text-neutral-800">
           Room Dashboard Sign In
         </p>
         <p className="text-center text-sm">
