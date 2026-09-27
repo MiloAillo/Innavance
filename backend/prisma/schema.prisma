@@ -82,6 +82,7 @@ model Rooms {
   smartDoorIsOpened   Boolean
   electricityOutput   Float
   waterOutput         Float
+  deletedAt           DateTime?
 
   features            RoomsFeatures[]
   roomsAddons         RoomsAddons[]
@@ -89,13 +90,16 @@ model Rooms {
 }
 
 model Addons {
-  id              Int                       @id @default(autoincrement())
-  addon           String @db.VarChar(50)    
-  price           Int
-  borrowMaximum   Int
+  id                Int                       @id @default(autoincrement())
+  addon             String @db.VarChar(50)    
+  price             Int
+  borrowMaximum     Int
+  totalStock        Int                       @default(10)
+  currentlyBorrowed Int                       @default(0)
+  isActive          Boolean                   @default(true)
 
-  roomsAddons     RoomsAddons[]
-  bookingsAddons  BookingsAddons[]
+  roomsAddons       RoomsAddons[]
+  bookingsAddons    BookingsAddons[]
 }
 
 model RoomsAddons {
@@ -123,8 +127,18 @@ model Bookings {
   id                      Int                         @id @default(autoincrement())
   room_id                 Int
   status                  BookingsStatus
-  name                    String @db.VarChar(255)
+  fullName                String @db.VarChar(100)     @default("")
   phoneNumber             String @db.VarChar(25)
+  nik                     String @db.VarChar(255)     @default("")
+  idCardPhotoPath         String @db.VarChar(500)     @default("")
+  birthDate               DateTime                    @default(now())
+  sex                     Sex                         @default(MALE)
+  homeAddress             String @db.VarChar(500)     @default("")
+  profession              String? @db.VarChar(100)
+  workplaceSchool         String? @db.VarChar(200)
+  emergencyContactName    String @db.VarChar(100)     @default("")
+  emergencyContactNumber  String @db.VarChar(20)      @default("")
+  emergencyContactRelation String @db.VarChar(50)     @default("")
   duration                Int
   price                   Int
   paymentMethod           String @db.VarChar(100)
@@ -138,9 +152,12 @@ model Bookings {
   checkedInAt             DateTime?
   checkedOutAt            DateTime?
 
-  bookingRoom             Rooms                       @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  bookingRoom             Rooms                       @relation(fields: [room_id], references: [id], onDelete: Restrict)
   bookingsAddons          BookingsAddons[]
   bookingsNotifications   BookingsNotifications[]
+
+  @@index([nik])
+  @@index([phoneNumber])
 }
 
 enum BookingsStatus {
@@ -151,13 +168,18 @@ enum BookingsStatus {
   checked_out
 }
 
+enum Sex {
+  MALE
+  FEMALE
+}
+
 model BookingsAddons {
   booking_id      Int
   addon_id        Int  
   count           Int
 
   addonBooking    Bookings                  @relation(fields: [booking_id], references: [id], onDelete: Cascade)
-  addonAddon      Addons                    @relation(fields: [addon_id], references: [id], onDelete: Cascade)
+  addonAddon      Addons                    @relation(fields: [addon_id], references: [id], onDelete: Restrict)
 
   @@id([booking_id, addon_id])
 

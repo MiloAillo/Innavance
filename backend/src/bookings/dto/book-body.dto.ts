@@ -1,15 +1,24 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsDateString,
+  IsEnum,
   IsInt,
   IsNotEmpty,
-  IsObject,
+  IsOptional,
   IsString,
   Max,
   MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { IsNIK } from '../validators/nik.validator';
+import { IsPhoneNumberID } from '../validators/phone-id.validator';
+
+enum SexEnum {
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+}
 
 export class BookBodyDto {
   @IsNotEmpty()
@@ -17,16 +26,70 @@ export class BookBodyDto {
   @IsInt()
   room_id!: number;
 
+  // Basic Information
   @IsNotEmpty()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(100)
   full_name!: string;
 
   @IsNotEmpty()
   @IsString()
-  @MaxLength(25)
+  @MaxLength(20)
+  @IsPhoneNumberID()
   phone_number!: string;
 
+  // Personal Information
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(16)
+  @IsNIK()
+  nik!: string;
+
+  @IsNotEmpty()
+  @IsString()
+  id_card_photo_path!: string; // Will be set after file upload
+
+  @IsNotEmpty()
+  @IsDateString()
+  birth_date!: string;
+
+  @IsNotEmpty()
+  @IsEnum(SexEnum)
+  sex!: SexEnum;
+
+  @IsNotEmpty()
+  @IsString()
+  home_address!: string;
+
+  // Professional Information (Optional)
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  profession?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  workplace_school?: string;
+
+  // Emergency Contact
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(100)
+  emergency_contact_name!: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(20)
+  @IsPhoneNumberID()
+  emergency_contact_number!: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(50)
+  emergency_contact_relation!: string;
+
+  // Booking Details
   @IsNotEmpty()
   @Type(() => Number)
   @IsInt()

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, Phone, AlertCircle, Sparkles, Package, Wallet, Users, Calendar } from "lucide-react";
+import { Clock, Phone, AlertCircle, Sparkles, Package, Wallet, Users, Calendar, User } from "lucide-react";
 import type { AdminBooking } from "../types/admin-dashboard.type";
+import { GuestDetailsModal } from "./guest-details-modal";
 
 interface BookingCardProps {
     booking: AdminBooking;
@@ -36,7 +37,8 @@ function useCountdown(deadline: Date | null) {
 }
 
 export function BookingCard({ booking, onApprove, onReject, onServeAddon, onDismissCall, onForceCheckout, canApprove, canDismiss, canForceCheckout, isApproving, isRejecting, isServingAddon, isDismissing, isForcingCheckout }: BookingCardProps) {
-    const formattedDate = new Date(booking.createdAt).toLocaleDateString();
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    
     const checkinDate = new Date(booking.createdAt);
     const checkoutDate = new Date(checkinDate.getTime() + booking.duration * 24 * 60 * 60 * 1000);
     const formattedCheckin = checkinDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -77,10 +79,10 @@ export function BookingCard({ booking, onApprove, onReject, onServeAddon, onDism
         >
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
-                <div>
-                    <h3 className="text-lg font-bold text-neutral-800">{booking.bookingRoom?.name || `Room #${booking.room_id}`}</h3>
-                    <p className="mt-1 text-sm font-medium text-neutral-600">{booking.name}</p>
-                </div>
+            <div>
+                <h3 className="text-lg font-bold text-neutral-800">{booking.bookingRoom?.name || `Room #${booking.room_id}`}</h3>
+                <p className="mt-1 text-sm font-medium text-neutral-600">{booking.fullName}</p>
+            </div>
                 <span
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${
                         booking.status === "on_hold"
@@ -98,10 +100,34 @@ export function BookingCard({ booking, onApprove, onReject, onServeAddon, onDism
 
             {/* Info rows */}
             <div className="flex flex-col gap-2 text-xs text-neutral-600">
-                <span className="flex items-center gap-2 font-semibold text-neutral-800">
-                    <Wallet size={15} />
-                    Rp {booking.price.toLocaleString("id-ID")} · {booking.paymentMethod}
-                </span>
+                {/* Prominent Price Box - Only for approval cards */}
+                {booking.status === "on_hold" && (
+                    <div className="rounded-lg border-2 border-green-500 bg-green-50 p-4 -mx-1 mb-2">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-green-700">
+                                    Total Payment
+                                </p>
+                                <p className="mt-1 text-2xl font-bold text-green-600">
+                                    Rp {booking.price.toLocaleString("id-ID")}
+                                </p>
+                            </div>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                                <Wallet size={24} className="text-green-600" />
+                            </div>
+                        </div>
+                        <p className="mt-2 text-xs text-green-700">
+                            {booking.paymentMethod} · {booking.duration} days
+                        </p>
+                    </div>
+                )}
+                {/* Regular price display for non-approval cards */}
+                {booking.status !== "on_hold" && (
+                    <span className="flex items-center gap-2 font-semibold text-neutral-800">
+                        <Wallet size={15} />
+                        Rp {booking.price.toLocaleString("id-ID")} · {booking.paymentMethod}
+                    </span>
+                )}
                 <a 
                     href={whatsappLink}
                     target="_blank"
@@ -140,6 +166,15 @@ export function BookingCard({ booking, onApprove, onReject, onServeAddon, onDism
 
             {/* Actions */}
             <div className="flex flex-col gap-2">
+                {/* View Guest Details Button */}
+                <button
+                    onClick={() => setShowDetailsModal(true)}
+                    className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2"
+                >
+                    <User size={16} />
+                    View Guest Details
+                </button>
+
                 {/* Innkeeper call */}
                 {booking.isInnkeeperCalled && (
                     <button
@@ -195,6 +230,13 @@ export function BookingCard({ booking, onApprove, onReject, onServeAddon, onDism
                     </button>
                 )}
             </div>
+
+            {/* Guest Details Modal */}
+            <GuestDetailsModal
+                booking={booking}
+                isOpen={showDetailsModal}
+                onClose={() => setShowDetailsModal(false)}
+            />
         </motion.article>
     );
 }

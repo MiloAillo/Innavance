@@ -48,6 +48,12 @@ export class AdminsDashboardController {
     return await this.adminsDasboardService.getBookings(bookingQueryDto);
   }
 
+  // GET admins/dashboard/bookings/:id/decrypt-nik  =>  decrypt NIK for a specific booking (Admin/Staff only)
+  @Get('bookings/:id/decrypt-nik')
+  async decryptNIK(@Param('id', ParseIntPipe) bookingId: number) {
+    return await this.adminsDasboardService.decryptNIK(bookingId);
+  }
+
   // GET admins/dashboard/users      =>      get paginated admin users list
   @Get('users')
   async getAdminUsers(@Query() adminUsersQueryDto: AdminUsersQueryDto) {

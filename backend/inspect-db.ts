@@ -98,7 +98,7 @@ async function inspectDatabase() {
     if (recentBookings.length > 0) {
       console.log('\n   Recent Bookings:')
       recentBookings.forEach((booking) => {
-        console.log(`     - ID ${booking.id}: ${booking.name} (${booking.phoneNumber})`)
+        console.log(`     - ID ${booking.id}: ${booking.fullName} (${booking.phoneNumber})`)
         console.log(`       Room: ${booking.bookingRoom.name}`)
         console.log(`       Status: ${booking.status}`)
         console.log(`       Duration: ${booking.duration}h, Price: $${booking.price}`)

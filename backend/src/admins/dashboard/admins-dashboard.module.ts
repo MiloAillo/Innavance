@@ -4,6 +4,7 @@ import { AdminsDashboardController } from './admins-dashboard.controller';
 import { AdminsAuthModule } from '../admins-auth/admins-auth.module';
 import { BullModule } from '@nestjs/bullmq';
 import { AdminDasboardProcessor } from './admins-dashboard.processor';
+import { EncryptionService } from 'src/helper/encryption.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { AdminDasboardProcessor } from './admins-dashboard.processor';
     }),
     AdminsAuthModule,
   ],
-  providers: [AdminsDashboardService, AdminDasboardProcessor],
+  providers: [AdminsDashboardService, AdminDasboardProcessor, EncryptionService],
   controllers: [AdminsDashboardController],
 })
 export class AdminsDashboardModule {}

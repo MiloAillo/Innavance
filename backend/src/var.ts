@@ -21,21 +21,29 @@ export const addons_data = [
     addon: 'Extra Bed',
     price: 120000,
     borrowMaximum: 1,
+    totalStock: 5,
+    isActive: true,
   },
   {
     addon: 'Hanger',
     price: 2000,
     borrowMaximum: 10,
+    totalStock: 50,
+    isActive: true,
   },
   {
     addon: 'Body Cleaning Kit',
     price: 65000,
     borrowMaximum: 10,
+    totalStock: 30,
+    isActive: true,
   },
   {
     addon: 'Towel',
     price: 20000,
     borrowMaximum: 10,
+    totalStock: 50,
+    isActive: true,
   },
 ];
 export const rooms_data = [

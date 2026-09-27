@@ -40,12 +40,14 @@ import { CreateStaffDto } from '../dto/create-staff.dto';
 import { UpdateSettingsDto } from '../dto/update-settings.dto';
 import { UpdateStaffPermissionsDto } from '../dto/update-staff-permissions.dto';
 import * as bcrypt from 'bcrypt';
+import { EncryptionService } from 'src/helper/encryption.service';
 
 @Injectable()
 export class AdminsDashboardService {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue('admin-booking-queue') private readonly bookingQueue: Queue,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   async getUserInfo(request: RequestWithJWTPayload) {
@@ -267,35 +269,63 @@ export class AdminsDashboardService {
             [order_by]: order,
           };
 
-    const includeORM = {
-      include: {
-        ...(include_room
-          ? {
-              bookingRoom: {
-                select: {
-                  id: true,
-                  name: true,
-                  price: true,
-                  capacity: true,
-                  isAvailable: true,
-                },
-              },
-            }
-          : {}),
-        bookingsAddons: {
-          include: {
-            addonAddon: {
-              select: { addon: true },
-            },
-          },
-        },
-      },
-    };
-
     const [bookings, bookingsCount] = await Promise.all([
       this.prisma.bookings.findMany({
         where: whereORM,
-        ...includeORM,
+        select: {
+          id: true,
+          room_id: true,
+          status: true,
+          // Personal Information
+          fullName: true,
+          phoneNumber: true,
+          nik: true, // Encrypted
+          idCardPhotoPath: true,
+          birthDate: true,
+          sex: true,
+          homeAddress: true,
+          // Professional Information (optional)
+          profession: true,
+          workplaceSchool: true,
+          // Emergency Contact
+          emergencyContactName: true,
+          emergencyContactNumber: true,
+          emergencyContactRelation: true,
+          // Booking Details
+          duration: true,
+          price: true,
+          paymentMethod: true,
+          isAddonServed: true,
+          isInnkeeperCalled: true,
+          isAutoApprove: true,
+          checkoutGraceTime: true,
+          autoApproveTime: true,
+          createdAt: true,
+          updatedAt: true,
+          checkedInAt: true,
+          checkedOutAt: true,
+          // Relations
+          ...(include_room
+            ? {
+                bookingRoom: {
+                  select: {
+                    id: true,
+                    name: true,
+                    price: true,
+                    capacity: true,
+                    isAvailable: true,
+                  },
+                },
+              }
+            : {}),
+          bookingsAddons: {
+            include: {
+              addonAddon: {
+                select: { addon: true },
+              },
+            },
+          },
+        },
         orderBy: orderByORM,
         skip: skip,
         take: limit,
@@ -317,6 +347,24 @@ export class AdminsDashboardService {
         page_end: Math.ceil(bookingsCount / limit),
       },
     };
+  }
+
+  async decryptNIK(bookingId: number) {
+    const booking = await this.prisma.bookings.findUnique({
+      where: { id: bookingId },
+      select: { nik: true },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    try {
+      const decryptedNIK = this.encryptionService.decrypt(booking.nik);
+      return { nik: decryptedNIK };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to decrypt NIK');
+    }
   }
 
   async getAdminUsers(adminUsersQueryDto: AdminUsersQueryDto) {

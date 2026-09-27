@@ -33,11 +33,13 @@ import type {
   AdminSettings as AdminSettingsType,
   AdminUserInfo,
   AdminUsersResponse,
+  AdminRoom,
 } from "../../types/admin-dashboard.type";
 import { AdminSidebar, type AdminView } from "../../components/admin-sidebar";
 import { BookingCard } from "../../components/admin-booking-card";
 import { RoomCard } from "../../components/admin-room-card";
 import { useViewPolling } from "../../hooks/useViewPolling";
+import { AdminBookingModal } from "../../components/admin-booking-modal";
 
 interface PaginationProps {
   page: number;
@@ -168,6 +170,12 @@ export function AdminDashboard(): JSX.Element {
   const [servingAddonId, setServingAddonId] = useState<number | null>(null);
   const [dismissingId, setDismissingId] = useState<number | null>(null);
   const [forcingCheckoutId, setForcingCheckoutId] = useState<number | null>(null);
+
+  // Booking Modal State
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<AdminRoom | null>(null);
+  const [highlightBookingId, setHighlightBookingId] = useState<number | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const isManager = userInfo?.type === "manager";
   const canApprove =
@@ -516,6 +524,48 @@ export function AdminDashboard(): JSX.Element {
     }
   };
 
+  const handleCreateBooking = (room: AdminRoom) => {
+    setSelectedRoom(room);
+    setShowBookingModal(true);
+  };
+
+  const handleBookingSuccess = async (bookingId: number, guestName: string) => {
+    // Close modal
+    setShowBookingModal(false);
+    setSelectedRoom(null);
+
+    // Set highlight ID for animation
+    setHighlightBookingId(bookingId);
+
+    // Show success toast
+    setSuccessToast(`Booking created for ${guestName} - Review below`);
+
+    // Switch to home view
+    setView("home");
+
+    // Refresh data
+    await loadHomeData();
+    await loadRoomsData();
+
+    // Clear highlight after 3 seconds
+    setTimeout(() => {
+      setHighlightBookingId(null);
+    }, 3000);
+
+    // Clear toast after 5 seconds
+    setTimeout(() => {
+      setSuccessToast(null);
+    }, 5000);
+
+    // Scroll to approval section
+    setTimeout(() => {
+      const approvalSection = document.querySelector('[data-section="approvals"]');
+      if (approvalSection) {
+        approvalSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   if (loading)
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-neutral-50">
@@ -555,23 +605,27 @@ export function AdminDashboard(): JSX.Element {
     );
 
   const renderBooking = (booking: AdminBookingsResponse["data"][number]) => (
-    <BookingCard
+    <div
       key={booking.id}
-      booking={booking}
-      onApprove={handleApprove}
-      onReject={handleReject}
-      onServeAddon={handleServeAddon}
-      onDismissCall={handleDismissCall}
-      onForceCheckout={handleForceCheckout}
-      canApprove={canApprove}
-      canDismiss={canDismiss}
-      canForceCheckout={canForceCheckout}
-      isApproving={approvingId === booking.id}
-      isRejecting={rejectingId === booking.id}
-      isServingAddon={servingAddonId === booking.id}
-      isDismissing={dismissingId === booking.id}
-      isForcingCheckout={forcingCheckoutId === booking.id}
-    />
+      className={highlightBookingId === booking.id ? "animate-pulse" : ""}
+    >
+      <BookingCard
+        booking={booking}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onServeAddon={handleServeAddon}
+        onDismissCall={handleDismissCall}
+        onForceCheckout={handleForceCheckout}
+        canApprove={canApprove}
+        canDismiss={canDismiss}
+        canForceCheckout={canForceCheckout}
+        isApproving={approvingId === booking.id}
+        isRejecting={rejectingId === booking.id}
+        isServingAddon={servingAddonId === booking.id}
+        isDismissing={dismissingId === booking.id}
+        isForcingCheckout={forcingCheckoutId === booking.id}
+      />
+    </div>
   );
 
   return (
@@ -585,6 +639,22 @@ export function AdminDashboard(): JSX.Element {
         onLogout={handleLogout}
       />
       <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto p-6">
+        {successToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 flex items-center justify-between"
+          >
+            <p className="text-sm font-semibold text-green-700">{successToast}</p>
+            <button
+              onClick={() => setSuccessToast(null)}
+              className="text-green-600 hover:text-green-800"
+            >
+              ✕
+            </button>
+          </motion.div>
+        )}
         {actionError && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
             <div className="flex items-start justify-between gap-3">
@@ -629,7 +699,7 @@ export function AdminDashboard(): JSX.Element {
                 </article>
               </div>
             </section>
-            <section className="flex flex-col gap-4">
+            <section className="flex flex-col gap-4" data-section="approvals">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-xl font-bold text-neutral-800">
@@ -898,7 +968,7 @@ export function AdminDashboard(): JSX.Element {
             {rooms?.data.length ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {rooms.data.map((room) => (
-                  <RoomCard key={room.id} room={room} />
+                  <RoomCard key={room.id} room={room} onCreateBooking={handleCreateBooking} />
                 ))}
               </div>
             ) : (
@@ -1728,6 +1798,17 @@ export function AdminDashboard(): JSX.Element {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Booking Modal */}
+      <AdminBookingModal
+        room={selectedRoom}
+        isOpen={showBookingModal}
+        onClose={() => {
+          setShowBookingModal(false);
+          setSelectedRoom(null);
+        }}
+        onSuccess={handleBookingSuccess}
+      />
     </div>
   );
 }

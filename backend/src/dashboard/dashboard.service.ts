@@ -52,7 +52,7 @@ export class DashboardService {
       booking: {
         id: request.data.bookings[0].id,
         status: request.data.bookings[0].status,
-        name: request.data.bookings[0].name,
+        name: request.data.bookings[0].fullName,
         duration: request.data.bookings[0].duration,
         price: request.data.bookings[0].price,
         payment_method: request.data.bookings[0].paymentMethod,

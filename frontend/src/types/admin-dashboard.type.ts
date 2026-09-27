@@ -10,8 +10,18 @@ export interface AdminRoomBooking {
   room_id: number;
   status:
     "on_hold" | "rejected" | "checked_in" | "checking_out" | "checked_out";
-  name: string;
+  fullName: string;
   phoneNumber: string;
+  nik: string;
+  idCardPhotoPath: string;
+  birthDate: string;
+  sex: "MALE" | "FEMALE";
+  homeAddress: string;
+  profession?: string;
+  workplaceSchool?: string;
+  emergencyContactName: string;
+  emergencyContactNumber: string;
+  emergencyContactRelation: string;
   duration: number;
   price: number;
   paymentMethod: string;
@@ -62,8 +72,18 @@ export interface AdminBooking {
   room_id: number;
   status:
     "on_hold" | "rejected" | "checked_in" | "checking_out" | "checked_out";
-  name: string;
+  fullName: string;
   phoneNumber: string;
+  nik: string;
+  idCardPhotoPath: string;
+  birthDate: string;
+  sex: "MALE" | "FEMALE";
+  homeAddress: string;
+  profession?: string;
+  workplaceSchool?: string;
+  emergencyContactName: string;
+  emergencyContactNumber: string;
+  emergencyContactRelation: string;
   duration: number;
   price: number;
   paymentMethod: string;

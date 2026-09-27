@@ -13,12 +13,14 @@ import { generateRoomPin } from '../helper/generate-room-pin';
 import { InjectQueue } from '@nestjs/bullmq';
 import { delay, Queue } from 'bullmq';
 import maskData from 'maskdata';
+import { EncryptionService } from '../helper/encryption.service';
 
 @Injectable()
 export class BookingsService {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue('booking-queue') private readonly bookingQueue: Queue,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   async detail(bookingId: number) {
@@ -27,7 +29,7 @@ export class BookingsService {
       where: { id: bookingId },
       select: {
         room_id: true,
-        name: true,
+        fullName: true,
         phoneNumber: true,
         duration: true,
         price: true,
@@ -50,7 +52,7 @@ export class BookingsService {
 
     return {
       room_id: booking.room_id,
-      name: maskData.maskStringV2(booking.name, {
+      name: maskData.maskStringV2(booking.fullName, {
         unmaskedStartCharacters: 1,
         unmaskedEndCharacters: 2,
       }),
@@ -105,17 +107,27 @@ export class BookingsService {
       if (!roomAddonsId.includes(addon.id))
         throw new UnauthorizedException(`addon_id ${addon.id} isn't available`);
 
-      if (addon.count > roomAddons[addon.id].borrowMaximum)
+      const addonData = roomAddons[addon.id];
+
+      // Check per-booking limit
+      if (addon.count > addonData.borrowMaximum)
         throw new UnauthorizedException(
-          `addon_id ${addon.id} exceed maximum borrow allowed`,
+          `addon_id ${addon.id} exceed maximum borrow allowed (${addonData.borrowMaximum})`,
         );
 
-      price += roomAddons[addon.id].price * addon.count;
+      // Check available stock
+      const availableStock = addonData.totalStock - addonData.currentlyBorrowed;
+      if (addon.count > availableStock)
+        throw new UnauthorizedException(
+          `addon_id ${addon.id} insufficient stock. Available: ${availableStock}, Requested: ${addon.count}`,
+        );
+
+      price += addonData.price * addon.count;
 
       responseAddons.push({
-        addon_name: roomAddons[addon.id].name,
+        addon_name: addonData.addon,
         count: addon.count,
-        price: roomAddons[addon.id].price * addon.count,
+        price: addonData.price * addon.count,
       });
     });
 
@@ -142,14 +154,37 @@ export class BookingsService {
       count: addon.count,
     }));
 
+    // Encrypt NIK before storing
+    const encryptedNik = this.encryptionService.encrypt(bookBodyDto.nik);
+
     const booking = await this.prisma.$transaction(async (tx) => {
       const [createdBooking] = await Promise.all([
         tx.bookings.create({
           data: {
             room_id: room.id,
             status: waitForApproval ? 'on_hold' : 'checked_in',
-            name: bookBodyDto.full_name,
+            
+            // Basic info
+            fullName: bookBodyDto.full_name,
             phoneNumber: bookBodyDto.phone_number,
+            
+            // Personal info (NEW)
+            nik: encryptedNik,
+            idCardPhotoPath: bookBodyDto.id_card_photo_path,
+            birthDate: new Date(bookBodyDto.birth_date),
+            sex: bookBodyDto.sex,
+            homeAddress: bookBodyDto.home_address,
+            
+            // Professional info (NEW)
+            profession: bookBodyDto.profession,
+            workplaceSchool: bookBodyDto.workplace_school,
+            
+            // Emergency contact (NEW)
+            emergencyContactName: bookBodyDto.emergency_contact_name,
+            emergencyContactNumber: bookBodyDto.emergency_contact_number,
+            emergencyContactRelation: bookBodyDto.emergency_contact_relation,
+            
+            // Booking details
             duration: bookBodyDto.duration,
             price: price,
             isAutoApprove: adminSettings?.isAutoApprove,
@@ -169,6 +204,17 @@ export class BookingsService {
           where: { id: room.id },
           data: { isAvailable: false },
         }),
+        // Increment currentlyBorrowed for each addon
+        ...bookBodyDto.addons.map((addon) =>
+          tx.addons.update({
+            where: { id: addon.id },
+            data: {
+              currentlyBorrowed: {
+                increment: addon.count,
+              },
+            },
+          }),
+        ),
       ]);
 
       if (!waitForApproval) {
@@ -527,6 +573,14 @@ export class BookingsService {
     phone_number: string,
     smartDoorDefaultPin: string,
   ) {
+    // Get booking with addons before checkout
+    const booking = await tx.bookings.findUnique({
+      where: { id: booking_id },
+      include: {
+        bookingsAddons: true,
+      },
+    });
+
     await tx.rooms.update({
       where: { id: room_id },
       data: {
@@ -543,6 +597,18 @@ export class BookingsService {
         checkedOutAt: new Date(),
       },
     });
+
+    // Decrement currentlyBorrowed for each addon
+    for (const bookingAddon of booking.bookingsAddons) {
+      await tx.addons.update({
+        where: { id: bookingAddon.addon_id },
+        data: {
+          currentlyBorrowed: {
+            decrement: bookingAddon.count,
+          },
+        },
+      });
+    }
 
     await axios.post(
       `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
@@ -618,6 +684,16 @@ export class BookingsService {
     });
     if (!adminSettings) throw new InternalServerErrorException();
 
+    // Get booking with addons before checkout
+    const booking = await this.prisma.bookings.findUnique({
+      where: { id: booking_id },
+      include: {
+        bookingsAddons: true,
+      },
+    });
+
+    if (!booking) throw new NotFoundException('Booking not found');
+
     await this.prisma.rooms.update({
       where: { id: room_id },
       data: {
@@ -635,6 +711,18 @@ export class BookingsService {
       },
     });
 
+    // Decrement currentlyBorrowed for each addon
+    for (const bookingAddon of booking.bookingsAddons) {
+      await this.prisma.addons.update({
+        where: { id: bookingAddon.addon_id },
+        data: {
+          currentlyBorrowed: {
+            decrement: bookingAddon.count,
+          },
+        },
+      });
+    }
+
     await axios.post(
       `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
       {
@@ -646,6 +734,7 @@ export class BookingsService {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
+        timeout: 10000,
       },
     );
   }
