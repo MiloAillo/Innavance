@@ -549,6 +549,25 @@ export class AdminsDashboardService {
       },
     });
 
+    if (typeof updateSettingsDto.smart_door_default_pin !== 'undefined') {
+      await this.prisma.rooms.updateMany({
+        where: {
+          isAvailable: true,
+          bookings: {
+            none: {
+              status: {
+                in: ['checked_in', 'checking_out'],
+              },
+            },
+          },
+          deletedAt: null,
+        },
+        data: {
+          smartDoorPin: updateSettingsDto.smart_door_default_pin,
+        },
+      });
+    }
+
     return {
       is_auto_approve: adminSettings.isAutoApprove,
       auto_approve_time: adminSettings.autoApproveTime,
