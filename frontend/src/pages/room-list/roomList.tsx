@@ -168,9 +168,23 @@ export function RoomList(): JSX.Element {
                       {room.capacity}{" "}
                       {room.capacity === 1 ? "person" : "people"} max
                     </span>
-                    <p className="line-clamp-2 text-sm text-neutral-600">
-                      {room.description}
-                    </p>
+                    {room.features && room.features.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {room.features.slice(0, 3).map((feature) => (
+                          <span 
+                            key={feature.id}
+                            className="text-xs text-neutral-600"
+                          >
+                            {feature.feature}
+                          </span>
+                        ))}
+                        {room.features.length > 3 && (
+                          <span className="text-xs text-neutral-500">
+                            +{room.features.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="mt-5 flex items-end justify-between">
                     <div>
