@@ -9,6 +9,10 @@ import type {
   StaffPermissions,
   AdminAddon,
 } from "../types/admin-dashboard.type";
+import type {
+  PaginatedAdminNotificationsResponse,
+  UnreadCountResponse,
+} from "../types/admin-notification.type";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3000";
 
@@ -287,5 +291,41 @@ export async function deactivateAddon(id: number): Promise<{ message: string }> 
 
 export async function reactivateAddon(id: number): Promise<{ message: string }> {
   const response = await adminApi.patch(`/admins/dashboard/addons/${id}/reactivate`);
+  return response.data;
+}
+
+export async function getAdminNotifications(
+  page: number = 1,
+  limit: number = 10,
+  type?: 'info' | 'warning' | 'important',
+  unreadOnly?: boolean
+): Promise<PaginatedAdminNotificationsResponse> {
+  const params = new URLSearchParams();
+  params.append('page', page.toString());
+  params.append('limit', limit.toString());
+  if (type) params.append('type', type);
+  if (unreadOnly !== undefined) params.append('unread_only', unreadOnly.toString());
+
+  const response = await adminApi.get(`/admins/dashboard/notifications?${params.toString()}`);
+  return response.data;
+}
+
+export async function getAdminUnreadCount(): Promise<UnreadCountResponse> {
+  const response = await adminApi.get('/admins/dashboard/notifications/unread-count');
+  return response.data;
+}
+
+export async function markAdminNotificationRead(id: number): Promise<{ message: string }> {
+  const response = await adminApi.patch(`/admins/dashboard/notifications/${id}/read`);
+  return response.data;
+}
+
+export async function markAllAdminNotificationsRead(): Promise<{ message: string }> {
+  const response = await adminApi.patch('/admins/dashboard/notifications/read-all');
+  return response.data;
+}
+
+export async function dismissAdminNotification(id: number): Promise<{ message: string }> {
+  const response = await adminApi.delete(`/admins/dashboard/notifications/${id}`);
   return response.data;
 }

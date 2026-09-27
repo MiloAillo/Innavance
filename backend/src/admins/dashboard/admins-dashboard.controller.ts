@@ -28,6 +28,7 @@ import { CreateRoomDto } from '../dto/create-room.dto';
 import { UpdateRoomDto } from '../dto/update-room.dto';
 import { CreateAddonDto } from '../dto/create-addon.dto';
 import { UpdateAddonDto } from '../dto/update-addon.dto';
+import { AdminNotificationQueryDto } from '../dto/admin-notification-query.dto';
 
 @Controller('admins/dashboard')
 @UseGuards(jwtAuthGuard.JwtAuthGuard)
@@ -261,5 +262,57 @@ export class AdminsDashboardController {
     @Req() request: jwtAuthGuard.RequestWithJWTPayload,
   ) {
     return await this.adminsDasboardService.deleteStaff(id, request);
+  }
+
+  // GET admins/dashboard/notifications => get paginated admin notifications
+  @Get('notifications')
+  async getAdminNotifications(
+    @Query() query: AdminNotificationQueryDto,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.getAdminNotifications(
+      query,
+      request.user.id,
+    );
+  }
+
+  // GET admins/dashboard/notifications/unread-count => get unread count
+  @Get('notifications/unread-count')
+  async getUnreadCount(@Req() request: jwtAuthGuard.RequestWithJWTPayload) {
+    return await this.adminsDasboardService.getUnreadCount(request.user.id);
+  }
+
+  // PATCH admins/dashboard/notifications/:id/read => mark notification as read
+  @Patch('notifications/:id/read')
+  async markNotificationAsRead(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.markNotificationAsRead(
+      id,
+      request.user.id,
+    );
+  }
+
+  // PATCH admins/dashboard/notifications/read-all => mark all notifications as read
+  @Patch('notifications/read-all')
+  async markAllNotificationsAsRead(
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.markAllNotificationsAsRead(
+      request.user.id,
+    );
+  }
+
+  // DELETE admins/dashboard/notifications/:id => dismiss notification (hide for current user only)
+  @Delete('notifications/:id')
+  async dismissAdminNotification(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.dismissAdminNotification(
+      id,
+      request.user.id,
+    );
   }
 }

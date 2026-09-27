@@ -221,6 +221,30 @@ export class BookingsService {
         ),
       ]);
 
+      // Check for low stock warning (80% threshold)
+      for (const addon of bookBodyDto.addons) {
+        const addonData = await tx.addons.findUnique({
+          where: { id: addon.id },
+          select: { 
+            addon: true, 
+            totalStock: true, 
+            currentlyBorrowed: true 
+          },
+        });
+
+        if (addonData && addonData.currentlyBorrowed >= addonData.totalStock * 0.8) {
+          const available = addonData.totalStock - addonData.currentlyBorrowed;
+          await tx.adminNotifications.create({
+            data: {
+              admin_id: 1,
+              type: 'warning',
+              title: 'Addon Stock Low',
+              description: `Addon '${addonData.addon}' stock is low (${available}/${addonData.totalStock} available).`,
+            },
+          });
+        }
+      }
+
       if (!waitForApproval) {
         await this.checkedInWithTransaction(
           tx,
@@ -248,6 +272,25 @@ export class BookingsService {
 
       return createdBooking;
     });
+
+    // Create admin notification for addons needing service
+    if (bookBodyDto.addons.length > 0) {
+      const addonsList = bookBodyDto.addons
+        .map((addon) => {
+          const addonData = roomAddons[addon.id];
+          return `${addonData?.addon} x${addon.count}`;
+        })
+        .join(', ');
+
+      await this.prisma.adminNotifications.create({
+        data: {
+          admin_id: 1,
+          type: 'warning',
+          title: 'Addons Need Serving',
+          description: `New booking #${booking.id} requires addon delivery: ${addonsList}`,
+        },
+      });
+    }
 
     return {
       booking_id: booking.id,
@@ -302,6 +345,15 @@ export class BookingsService {
           adminSettings.checkOutGracePeriod,
         );
       }
+    });
+
+    await this.prisma.adminNotifications.create({
+      data: {
+        admin_id: 1,
+        type: 'info',
+        title: 'Guest Initiated Checkout',
+        description: `Guest ${booking.fullName} initiated checkout from room '${booking.bookingRoom.name}'.`,
+      },
     });
 
     return {

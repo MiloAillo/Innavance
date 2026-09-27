@@ -89,6 +89,16 @@ export class DashboardService {
             "Don't go anywhere, Innkeeper will arrive at your door shortly.",
         },
       });
+
+      // create admin notification
+      await this.prisma.adminNotifications.create({
+        data: {
+          admin_id: 1,
+          type: 'important',
+          title: 'Staff Called',
+          description: `Guest ${request.data.bookings[0].fullName} in room '${request.data.name}' called for staff assistance.`,
+        },
+      });
     }
   }
 

@@ -8,7 +8,7 @@ interface RoomFormData {
   name: string;
   price: number;
   capacity: number;
-  description: string;
+  features: string[];
   addonIds: number[];
 }
 

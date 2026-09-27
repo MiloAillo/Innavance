@@ -88,6 +88,15 @@ export class CleanupService {
             this.logger.error(
               `Failed to clean up booking #${booking.id}: ${error.message}`,
             );
+
+            await this.prisma.adminNotifications.create({
+              data: {
+                admin_id: 1,
+                type: 'important',
+                title: 'Automatic Cleanup Failed',
+                description: `Failed to cleanup stuck booking #${booking.id}. Manual intervention required.`,
+              },
+            });
           }
         } else {
           const remainingMinutes = Math.ceil(

@@ -1,4 +1,5 @@
 import { LogOut, Building2, CalendarDays, Clock3, Settings, Users, Package } from "lucide-react";
+import AdminNotificationBell from "./admin-notification-bell";
 
 export type AdminView = "home" | "rooms" | "addons" | "history" | "users" | "settings";
 
@@ -23,7 +24,7 @@ const items: { id: AdminView; label: string; icon: typeof Building2; managerOnly
 export function AdminSidebar({ activeView, isManager, name, isPolling, onChange, onLogout }: AdminSidebarProps) {
     return (
         <aside className="flex w-full shrink-0 flex-col bg-neutral-900 p-4 text-white md:h-full md:w-64 md:overflow-y-auto">
-            <div className="mb-4 flex items-center justify-between gap-3 px-2 md:mb-8">
+            <div className="mb-8 flex items-center justify-between gap-3 px-2 md:mb-12">
                 <div>
                     <div className="flex items-center gap-2">
                         <p className="font-bold">Innavance</p>
@@ -36,6 +37,7 @@ export function AdminSidebar({ activeView, isManager, name, isPolling, onChange,
                     </div>
                     <p className="text-xs text-neutral-400">Admin panel</p>
                 </div>
+                <AdminNotificationBell />
                 <div className="flex items-center gap-2 md:hidden">
                     <span className="text-sm font-medium text-neutral-300">{name}</span>
                     <button aria-label="Sign out" onClick={onLogout} className="rounded-lg p-2 text-neutral-300 hover:bg-neutral-800 hover:text-white"><LogOut size={18} /></button>

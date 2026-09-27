@@ -46,6 +46,8 @@ import { CreateAddonDto } from '../dto/create-addon.dto';
 import { UpdateAddonDto } from '../dto/update-addon.dto';
 import * as bcrypt from 'bcrypt';
 import { EncryptionService } from 'src/helper/encryption.service';
+import { CreateAdminNotificationDto } from '../dto/create-admin-notification.dto';
+import { AdminNotificationQueryDto } from '../dto/admin-notification-query.dto';
 
 @Injectable()
 export class AdminsDashboardService {
@@ -550,7 +552,7 @@ export class AdminsDashboardService {
     });
 
     if (typeof updateSettingsDto.smart_door_default_pin !== 'undefined') {
-      await this.prisma.rooms.updateMany({
+      const updatedRoomsResult = await this.prisma.rooms.updateMany({
         where: {
           isAvailable: true,
           bookings: {
@@ -566,6 +568,18 @@ export class AdminsDashboardService {
           smartDoorPin: updateSettingsDto.smart_door_default_pin,
         },
       });
+
+      if (updatedRoomsResult.count > 0) {
+        const admin = await this.prisma.adminUsers.findUnique({
+          where: { id: request.user.id },
+        });
+
+        await this.createAdminNotification({
+          type: 'important',
+          title: 'Default Door PIN Updated',
+          description: `${admin?.name || 'Manager'} changed default door PIN to ${updateSettingsDto.smart_door_default_pin}. ${updatedRoomsResult.count} unoccupied room(s) updated.`,
+        });
+      }
     }
 
     return {
@@ -669,6 +683,13 @@ export class AdminsDashboardService {
         type: 'info',
       },
     });
+
+    // create admin notification
+    await this.createAdminNotification({
+      type: 'info',
+      title: 'Staff Call Dismissed',
+      description: `${admin.name} responded to the call from booking #${booking.id}.`,
+    });
   }
 
   async addonServed(
@@ -708,6 +729,18 @@ export class AdminsDashboardService {
         title: 'Addons Delivered',
         description: `Your addons have been served: ${addonsList}`,
       },
+    });
+
+    // Get admin user info
+    const admin = await this.prisma.adminUsers.findUnique({
+      where: { id: request.user.id },
+    });
+
+    // Create admin notification
+    await this.createAdminNotification({
+      type: 'info',
+      title: 'Addons Served',
+      description: `${admin?.name || 'Staff'} served addons for booking #${booking.id}: ${addonsList}`,
     });
   }
 
@@ -818,6 +851,12 @@ export class AdminsDashboardService {
         },
       });
 
+      await this.createAdminNotification({
+        type: 'warning',
+        title: 'Force Checkout Executed',
+        description: `Room '${booking.bookingRoom.name}' has been force checked out.`,
+      });
+
       const bookingWithAddons = await this.prisma.bookings.findUnique({
         where: { id: booking.id },
         include: { bookingsAddons: true },
@@ -919,6 +958,12 @@ export class AdminsDashboardService {
         });
       }
     }
+
+    await this.createAdminNotification({
+      type: 'info',
+      title: 'Booking Rejected',
+      description: `Booking #${booking.id} for room '${booking.bookingRoom.name}' has been rejected.`,
+    });
 
     return { message: 'Booking rejected successfully' };
   }
@@ -1112,6 +1157,12 @@ export class AdminsDashboardService {
       });
     }
 
+    await this.createAdminNotification({
+      type: 'info',
+      title: 'New Room Created',
+      description: `Room '${createRoomDto.name}' has been created.`,
+    });
+
     return room;
   }
 
@@ -1274,6 +1325,12 @@ export class AdminsDashboardService {
       },
     });
 
+    await this.createAdminNotification({
+      type: 'warning',
+      title: 'Room Deleted',
+      description: `Room '${room.name}' has been deleted.`,
+    });
+
     return { message: 'Room deleted successfully' };
   }
 
@@ -1338,6 +1395,12 @@ export class AdminsDashboardService {
         currentlyBorrowed: 0,
         isActive: true,
       },
+    });
+
+    await this.createAdminNotification({
+      type: 'info',
+      title: 'New Addon Created',
+      description: `Addon '${createAddonDto.addon}' has been added.`,
     });
 
     return addon;
@@ -1442,6 +1505,12 @@ export class AdminsDashboardService {
       },
     });
 
+    await this.createAdminNotification({
+      type: 'info',
+      title: 'Addon Deactivated',
+      description: `Addon '${addon.addon}' has been deactivated.`,
+    });
+
     return { message: 'Addon deactivated successfully' };
   }
 
@@ -1470,5 +1539,209 @@ export class AdminsDashboardService {
     });
 
     return { message: 'Addon reactivated successfully' };
+  }
+
+  async createAdminNotification(dto: CreateAdminNotificationDto) {
+    return await this.prisma.adminNotifications.create({
+      data: {
+        admin_id: 1,
+        type: dto.type,
+        title: dto.title,
+        description: dto.description,
+      },
+    });
+  }
+
+  async getAdminNotifications(
+    query: AdminNotificationQueryDto,
+    userId: number,
+  ) {
+    const { page = 1, limit = 10, type, unread_only = false } = query;
+    const skip = (page - 1) * limit;
+
+    const dismissedNotificationIds = await this.prisma.adminNotificationsDismissed.findMany({
+      where: { admin_user_id: userId },
+      select: { notification_id: true },
+    });
+    const dismissedIds = dismissedNotificationIds.map((r) => r.notification_id);
+
+    let readNotificationIds: number[] = [];
+    if (unread_only) {
+      const readRecords = await this.prisma.adminNotificationsRead.findMany({
+        where: { admin_user_id: userId },
+        select: { notification_id: true },
+      });
+      readNotificationIds = readRecords.map((r) => r.notification_id);
+    }
+
+    const where = {
+      admin_id: 1,
+      ...(dismissedIds.length > 0 ? { id: { notIn: dismissedIds } } : {}),
+      ...(type ? { type } : {}),
+      ...(unread_only && readNotificationIds.length > 0
+        ? { id: { notIn: [...dismissedIds, ...readNotificationIds] } }
+        : {}),
+    };
+
+    const [notifications, total] = await Promise.all([
+      this.prisma.adminNotifications.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          readByUsers: {
+            where: { admin_user_id: userId },
+          },
+        },
+      }),
+      this.prisma.adminNotifications.count({ where }),
+    ]);
+
+    const data = notifications.map((n) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      description: n.description,
+      createdAt: n.createdAt.toISOString(),
+      isRead: n.readByUsers.length > 0,
+    }));
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getUnreadCount(userId: number) {
+    const dismissedNotificationIds = await this.prisma.adminNotificationsDismissed.findMany({
+      where: { admin_user_id: userId },
+      select: { notification_id: true },
+    });
+    const dismissedIds = dismissedNotificationIds.map((r) => r.notification_id);
+
+    const totalNotifications = await this.prisma.adminNotifications.count({
+      where: {
+        admin_id: 1,
+        ...(dismissedIds.length > 0 ? { id: { notIn: dismissedIds } } : {}),
+      },
+    });
+
+    const readCount = await this.prisma.adminNotificationsRead.count({
+      where: { 
+        admin_user_id: userId,
+        ...(dismissedIds.length > 0 ? { notification_id: { notIn: dismissedIds } } : {}),
+      },
+    });
+
+    return {
+      unread_count: totalNotifications - readCount,
+    };
+  }
+
+  async markNotificationAsRead(notificationId: number, userId: number) {
+    const notification = await this.prisma.adminNotifications.findUnique({
+      where: { id: notificationId },
+    });
+
+    if (!notification) throw new NotFoundException('Notification not found');
+
+    const alreadyRead = await this.prisma.adminNotificationsRead.findUnique({
+      where: {
+        admin_user_id_notification_id: {
+          admin_user_id: userId,
+          notification_id: notificationId,
+        },
+      },
+    });
+
+    if (alreadyRead) {
+      return { message: 'Notification already marked as read' };
+    }
+
+    await this.prisma.adminNotificationsRead.create({
+      data: {
+        admin_user_id: userId,
+        notification_id: notificationId,
+      },
+    });
+
+    return { message: 'Notification marked as read' };
+  }
+
+  async markAllNotificationsAsRead(userId: number) {
+    const dismissedNotificationIds = await this.prisma.adminNotificationsDismissed.findMany({
+      where: { admin_user_id: userId },
+      select: { notification_id: true },
+    });
+    const dismissedIds = dismissedNotificationIds.map((r) => r.notification_id);
+
+    const allNotifications = await this.prisma.adminNotifications.findMany({
+      where: {
+        admin_id: 1,
+        ...(dismissedIds.length > 0 ? { id: { notIn: dismissedIds } } : {}),
+      },
+      select: { id: true },
+    });
+
+    const alreadyRead = await this.prisma.adminNotificationsRead.findMany({
+      where: { admin_user_id: userId },
+      select: { notification_id: true },
+    });
+
+    const alreadyReadIds = new Set(alreadyRead.map((r) => r.notification_id));
+    const unreadNotifications = allNotifications.filter(
+      (n) => !alreadyReadIds.has(n.id),
+    );
+
+    if (unreadNotifications.length === 0) {
+      return { message: 'No unread notifications' };
+    }
+
+    await this.prisma.adminNotificationsRead.createMany({
+      data: unreadNotifications.map((n) => ({
+        admin_user_id: userId,
+        notification_id: n.id,
+      })),
+    });
+
+    return {
+      message: `${unreadNotifications.length} notifications marked as read`,
+    };
+  }
+
+  async dismissAdminNotification(notificationId: number, userId: number) {
+    const notification = await this.prisma.adminNotifications.findUnique({
+      where: { id: notificationId },
+    });
+
+    if (!notification) throw new NotFoundException('Notification not found');
+
+    const alreadyDismissed = await this.prisma.adminNotificationsDismissed.findUnique({
+      where: {
+        admin_user_id_notification_id: {
+          admin_user_id: userId,
+          notification_id: notificationId,
+        },
+      },
+    });
+
+    if (alreadyDismissed) {
+      return { message: 'Notification already dismissed' };
+    }
+
+    await this.prisma.adminNotificationsDismissed.create({
+      data: {
+        admin_user_id: userId,
+        notification_id: notificationId,
+      },
+    });
+
+    return { message: 'Notification dismissed successfully' };
   }
 }

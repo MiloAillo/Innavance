@@ -40,6 +40,8 @@ model AdminUsers {
   createdAt       DateTime                    @default(now())
 
   userAdmin       Admin                       @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  readNotifications AdminNotificationsRead[]
+  dismissedNotifications AdminNotificationsDismissed[]
 
   @@map("Admin_Users")
 }
@@ -58,8 +60,34 @@ model AdminNotifications {
   createdAt           DateTime                    @default(now())
 
   notificationAdmin   Admin                       @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  readByUsers         AdminNotificationsRead[]
+  dismissedByUsers    AdminNotificationsDismissed[]
 
   @@map("Admin_Notifications")
+}
+
+model AdminNotificationsRead {
+  admin_user_id       Int
+  notification_id     Int
+  readAt              DateTime                    @default(now())
+
+  adminUser           AdminUsers                  @relation(fields: [admin_user_id], references: [id], onDelete: Cascade)
+  notification        AdminNotifications          @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+
+  @@id([admin_user_id, notification_id])
+  @@map("Admin_Notifications_Read")
+}
+
+model AdminNotificationsDismissed {
+  admin_user_id       Int
+  notification_id     Int
+  dismissedAt         DateTime                    @default(now())
+
+  adminUser           AdminUsers                  @relation(fields: [admin_user_id], references: [id], onDelete: Cascade)
+  notification        AdminNotifications          @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+
+  @@id([admin_user_id, notification_id])
+  @@map("Admin_Notifications_Dismissed")
 }
 
 enum AdminNotificationsType {

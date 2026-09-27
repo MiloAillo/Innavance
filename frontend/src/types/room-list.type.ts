@@ -3,8 +3,11 @@ export interface Room {
     name: string;
     price: number;
     capacity: number;
-    description: string;
     isAvailable: boolean;
+    features?: Array<{
+        id: number;
+        feature: string;
+    }>;
 }
 
 export interface RoomListMeta {
