@@ -35,6 +35,16 @@ export interface AdminRoomBooking {
   checkedOutAt: string | null;
 }
 
+export interface RoomAddon {
+  id: number;
+  addon: string;
+  price: number;
+  borrowMaximum: number;
+  totalStock: number;
+  currentlyBorrowed: number;
+  isActive: boolean;
+}
+
 export interface AdminRoom {
   id: number;
   name: string;
@@ -48,6 +58,9 @@ export interface AdminRoom {
   waterOutput: number;
   accountId: string | null;
   bookings: AdminRoomBooking[];
+  roomsAddons?: {
+    addon: RoomAddon;
+  }[];
 }
 
 export interface AdminRoomsMeta {

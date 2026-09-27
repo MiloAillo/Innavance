@@ -114,10 +114,63 @@ export function AdminBookingForm({
     }
   };
 
+  const getAvailableAddons = () => {
+    if (!room.roomsAddons) return [];
+    return room.roomsAddons
+      .filter((ra) => ra.addon.isActive)
+      .map((ra) => ra.addon);
+  };
+
+  const getAddonQuantity = (addonId: number) => {
+    const addon = formData.addons.find((a) => a.id === addonId);
+    return addon ? addon.count : 0;
+  };
+
+  const updateAddonQuantity = (addonId: number, count: number) => {
+    const addon = getAvailableAddons().find((a) => a.id === addonId);
+    if (!addon) return;
+
+    const availableStock = addon.totalStock - addon.currentlyBorrowed;
+    const maxCount = Math.min(addon.borrowMaximum, availableStock);
+    const clampedCount = Math.max(0, Math.min(count, maxCount));
+
+    setFormData((prev) => {
+      const existingIndex = prev.addons.findIndex((a) => a.id === addonId);
+      if (clampedCount === 0) {
+        return {
+          ...prev,
+          addons: prev.addons.filter((a) => a.id !== addonId),
+        };
+      }
+      if (existingIndex >= 0) {
+        const newAddons = [...prev.addons];
+        newAddons[existingIndex] = { id: addonId, count: clampedCount };
+        return { ...prev, addons: newAddons };
+      }
+      return {
+        ...prev,
+        addons: [...prev.addons, { id: addonId, count: clampedCount }],
+      };
+    });
+  };
+
   const calculateTotal = () => {
     let total = room.price * formData.duration;
-    // Add addon prices (we'll need to fetch addon data separately or pass it)
+    const availableAddons = getAvailableAddons();
+    formData.addons.forEach((selectedAddon) => {
+      const addon = availableAddons.find((a) => a.id === selectedAddon.id);
+      if (addon) {
+        total += addon.price * selectedAddon.count;
+      }
+    });
     return total;
+  };
+
+  const getAddonSubtotal = (addonId: number) => {
+    const addon = getAvailableAddons().find((a) => a.id === addonId);
+    const quantity = getAddonQuantity(addonId);
+    if (!addon || quantity === 0) return 0;
+    return addon.price * quantity;
   };
 
   return (
@@ -469,6 +522,9 @@ export function AdminBookingForm({
                 +1 Month
               </button>
             </div>
+            {errors.duration && (
+              <p className="mt-1 text-xs text-red-600">{errors.duration}</p>
+            )}
           </div>
 
           <div>
@@ -492,9 +548,102 @@ export function AdminBookingForm({
           </div>
           <p className="mt-1 text-xs text-green-700">
             {formData.duration} day(s) × Rp {room.price.toLocaleString("id-ID")}
+            {formData.addons.length > 0 && " + addons"}
           </p>
         </div>
       </section>
+
+      {/* Addons Section */}
+      {getAvailableAddons().length > 0 && (
+        <section>
+          <h3 className="mb-4 text-lg font-bold text-neutral-800">
+            Additional Items (Optional)
+          </h3>
+          <div className="space-y-3">
+            {getAvailableAddons().map((addon) => {
+              const quantity = getAddonQuantity(addon.id);
+              const availableStock = addon.totalStock - addon.currentlyBorrowed;
+              const isOutOfStock = availableStock === 0;
+              const isLowStock = availableStock > 0 && availableStock <= 3;
+              const subtotal = getAddonSubtotal(addon.id);
+
+              return (
+                <div
+                  key={addon.id}
+                  className={`rounded-lg border p-4 ${
+                    isOutOfStock
+                      ? "border-red-200 bg-red-50"
+                      : isLowStock
+                      ? "border-yellow-200 bg-yellow-50"
+                      : "border-neutral-200 bg-white"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-neutral-900">
+                          {addon.addon}
+                        </p>
+                        {isOutOfStock && (
+                          <span className="rounded bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
+                            Out of Stock
+                          </span>
+                        )}
+                        {isLowStock && (
+                          <span className="rounded bg-yellow-500 px-2 py-0.5 text-xs font-semibold text-white">
+                            Low Stock
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm text-neutral-600">
+                        Rp {addon.price.toLocaleString("id-ID")} / item
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        Available: {availableStock} | Max per booking:{" "}
+                        {addon.borrowMaximum}
+                      </p>
+                      {subtotal > 0 && (
+                        <p className="mt-2 text-sm font-semibold text-green-600">
+                          Subtotal: Rp {subtotal.toLocaleString("id-ID")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateAddonQuantity(addon.id, quantity - 1)
+                        }
+                        disabled={isSubmitting || quantity === 0 || isOutOfStock}
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-200 text-neutral-700 hover:bg-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className="w-8 text-center font-semibold text-neutral-900">
+                        {quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateAddonQuantity(addon.id, quantity + 1)
+                        }
+                        disabled={
+                          isSubmitting ||
+                          isOutOfStock ||
+                          quantity >= Math.min(addon.borrowMaximum, availableStock)
+                        }
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Form Actions */}
       <div className="flex gap-3 border-t border-neutral-200 pt-6">

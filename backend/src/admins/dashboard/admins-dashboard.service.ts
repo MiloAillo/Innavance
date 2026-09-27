@@ -115,9 +115,9 @@ export class AdminsDashboardService {
           },
           bookings: whereBookingsConstraintORM,
         },
-        include: include_booking
-          ? {
-              bookings: {
+        include: {
+          bookings: include_booking
+            ? {
                 where: {
                   status: {
                     in: ['checked_in', 'checking_out'],
@@ -129,9 +129,24 @@ export class AdminsDashboardService {
                   createdAt: 'desc',
                 },
                 take: 1,
+              }
+            : undefined,
+          roomsAddons: {
+            include: {
+              addon: {
+                select: {
+                  id: true,
+                  addon: true,
+                  price: true,
+                  borrowMaximum: true,
+                  totalStock: true,
+                  currentlyBorrowed: true,
+                  isActive: true,
+                },
               },
-            }
-          : undefined,
+            },
+          },
+        },
         orderBy: {
           [order_by]: order,
         },
