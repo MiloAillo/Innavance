@@ -45,11 +45,22 @@ export interface RoomAddon {
   isActive: boolean;
 }
 
+export interface AdminAddon {
+  id: number;
+  addon: string;
+  price: number;
+  borrowMaximum: number;
+  totalStock: number;
+  currentlyBorrowed: number;
+  isActive: boolean;
+}
+
 export interface AdminRoom {
   id: number;
   name: string;
   price: number;
   capacity: number;
+  description: string;
   isAvailable: boolean;
   smartDoorPin: string;
   smartDoorIsLocked: boolean;

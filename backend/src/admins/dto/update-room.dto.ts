@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsInt, Min, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, MaxLength, IsArray } from 'class-validator';
 
 export class UpdateRoomDto {
   @IsOptional()
@@ -14,4 +14,9 @@ export class UpdateRoomDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  addonIds?: number[];
 }

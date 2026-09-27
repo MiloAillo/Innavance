@@ -29,6 +29,11 @@ import {
   createRoom,
   updateRoom,
   deleteRoom,
+  getAddons,
+  createAddon,
+  updateAddon,
+  deactivateAddon,
+  reactivateAddon,
 } from "../../API/admin-api";
 import type {
   AdminBookingsResponse,
@@ -37,6 +42,7 @@ import type {
   AdminUserInfo,
   AdminUsersResponse,
   AdminRoom,
+  AdminAddon,
 } from "../../types/admin-dashboard.type";
 import { AdminSidebar, type AdminView } from "../../components/admin-sidebar";
 import { BookingCard } from "../../components/admin-booking-card";
@@ -44,6 +50,8 @@ import { RoomCard } from "../../components/admin-room-card";
 import { useViewPolling } from "../../hooks/useViewPolling";
 import { AdminBookingModal } from "../../components/admin-booking-modal";
 import { AdminRoomModal } from "../../components/admin-room-modal";
+import { AdminAddonModal } from "../../components/admin-addon-modal";
+import { AddonCard } from "../../components/admin-addon-card";
 
 interface PaginationProps {
   page: number;
@@ -188,6 +196,14 @@ export function AdminDashboard(): JSX.Element {
   const [deleteRoomId, setDeleteRoomId] = useState<number | null>(null);
   const [deleteRoomLoading, setDeleteRoomLoading] = useState(false);
 
+  // Addon State
+  const [addons, setAddons] = useState<AdminAddon[]>([]);
+  const [showAddonModal, setShowAddonModal] = useState(false);
+  const [addonModalMode, setAddonModalMode] = useState<"create" | "edit">("create");
+  const [selectedAddonForEdit, setSelectedAddonForEdit] = useState<AdminAddon | null>(null);
+  const [deleteAddonId, setDeleteAddonId] = useState<number | null>(null);
+  const [deleteAddonLoading, setDeleteAddonLoading] = useState(false);
+
   const isManager = userInfo?.type === "manager";
   const canApprove =
     isManager || rooms?.meta.is_staff_allowed_to_approve === true;
@@ -256,6 +272,11 @@ export function AdminDashboard(): JSX.Element {
       const usersData = await getAdminUsers();
       setUsers(usersData);
     }
+  }
+
+  async function loadAddonsData() {
+    const addonsData = await getAddons();
+    setAddons(addonsData);
   }
 
   async function loadData() {
@@ -341,6 +362,13 @@ export function AdminDashboard(): JSX.Element {
     interval: 5000,
     onPoll: loadRoomsData,
     dependencies: [roomsPage, roomsSort, roomsOrder, roomsAvailable, roomsSearch],
+  });
+
+  useViewPolling({
+    enabled: !loading && view === "addons",
+    interval: 5000,
+    onPoll: loadAddonsData,
+    dependencies: [],
   });
 
   useViewPolling({
@@ -594,6 +622,7 @@ export function AdminDashboard(): JSX.Element {
     price: number;
     capacity: number;
     description: string;
+    addonIds: number[];
   }) => {
     try {
       if (roomModalMode === "create") {
@@ -604,6 +633,7 @@ export function AdminDashboard(): JSX.Element {
           price: data.price,
           capacity: data.capacity,
           description: data.description,
+          addonIds: data.addonIds,
         });
         setSuccessToast("Room updated successfully!");
       }
@@ -631,6 +661,70 @@ export function AdminDashboard(): JSX.Element {
       setActionError(error instanceof Error ? error.message : "Failed to delete room");
     } finally {
       setDeleteRoomLoading(false);
+    }
+  };
+
+  const handleCreateAddon = () => {
+    setAddonModalMode("create");
+    setSelectedAddonForEdit(null);
+    setShowAddonModal(true);
+  };
+
+  const handleEditAddon = (addon: AdminAddon) => {
+    setAddonModalMode("edit");
+    setSelectedAddonForEdit(addon);
+    setShowAddonModal(true);
+  };
+
+  const handleAddonSubmit = async (data: {
+    addon: string;
+    price: number;
+    borrowMaximum: number;
+    totalStock: number;
+  }) => {
+    try {
+      if (addonModalMode === "create") {
+        await createAddon(data);
+        setSuccessToast("Addon created successfully!");
+      } else if (selectedAddonForEdit) {
+        await updateAddon(selectedAddonForEdit.id, data);
+        setSuccessToast("Addon updated successfully!");
+      }
+      await loadAddonsData();
+      setTimeout(() => setSuccessToast(null), 5000);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleDeactivateAddon = (addonId: number) => {
+    setDeleteAddonId(addonId);
+  };
+
+  const confirmDeactivateAddon = async () => {
+    if (!deleteAddonId) return;
+    setDeleteAddonLoading(true);
+    try {
+      await deactivateAddon(deleteAddonId);
+      setDeleteAddonId(null);
+      setSuccessToast("Addon deactivated successfully!");
+      await loadAddonsData();
+      setTimeout(() => setSuccessToast(null), 5000);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to deactivate addon");
+    } finally {
+      setDeleteAddonLoading(false);
+    }
+  };
+
+  const handleReactivateAddon = async (addonId: number) => {
+    try {
+      await reactivateAddon(addonId);
+      setSuccessToast("Addon reactivated successfully!");
+      await loadAddonsData();
+      setTimeout(() => setSuccessToast(null), 5000);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to reactivate addon");
     }
   };
 
@@ -1060,6 +1154,68 @@ export function AdminDashboard(): JSX.Element {
             ) : (
               <p className="rounded-xl border border-dashed border-neutral-200 p-8 text-center text-sm text-neutral-500">
                 No rooms configured.
+              </p>
+            )}
+          </div>
+        )}
+        {view === "addons" && (
+          <div className="flex flex-col gap-6">
+            <section className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-neutral-800">Addons</h2>
+                <p className="text-sm text-neutral-500">
+                  Manage room addons and inventory
+                </p>
+              </div>
+              {isManager && (
+                <button
+                  onClick={handleCreateAddon}
+                  className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-600 transition-colors"
+                >
+                  <UserPlus size={18} />
+                  Add Addon
+                </button>
+              )}
+            </section>
+            {addons.filter((a) => a.isActive).length > 0 && (
+              <>
+                <h3 className="text-lg font-bold text-neutral-800">Active Addons</h3>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {addons
+                    .filter((addon) => addon.isActive)
+                    .map((addon) => (
+                      <AddonCard
+                        key={addon.id}
+                        addon={addon}
+                        onEdit={handleEditAddon}
+                        onDeactivate={handleDeactivateAddon}
+                        isManager={isManager}
+                      />
+                    ))}
+                </div>
+              </>
+            )}
+            {addons.filter((a) => !a.isActive).length > 0 && (
+              <>
+                <h3 className="text-lg font-bold text-neutral-600 mt-4">Inactive Addons</h3>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {addons
+                    .filter((addon) => !addon.isActive)
+                    .map((addon) => (
+                      <AddonCard
+                        key={addon.id}
+                        addon={addon}
+                        onEdit={handleEditAddon}
+                        onReactivate={handleReactivateAddon}
+                        isManager={isManager}
+                      />
+                    ))}
+                </div>
+              </>
+            )}
+            {addons.length === 0 && (
+              <p className="rounded-xl border border-dashed border-neutral-200 p-8 text-center text-sm text-neutral-500">
+                No addons configured.
               </p>
             )}
           </div>
@@ -1953,11 +2109,77 @@ export function AdminDashboard(): JSX.Element {
                 name: selectedRoomForEdit.name,
                 price: selectedRoomForEdit.price,
                 capacity: selectedRoomForEdit.capacity,
-                description: "",
+                description: selectedRoomForEdit.description,
+                addonIds: selectedRoomForEdit.roomsAddons?.map((ra) => ra.addon.id) || [],
+              }
+            : undefined
+        }
+        addons={addons}
+      />
+
+      {/* Addon Modal */}
+      <AdminAddonModal
+        isOpen={showAddonModal}
+        onClose={() => {
+          setShowAddonModal(false);
+          setSelectedAddonForEdit(null);
+        }}
+        onSubmit={handleAddonSubmit}
+        mode={addonModalMode}
+        initialData={
+          selectedAddonForEdit
+            ? {
+                addon: selectedAddonForEdit.addon,
+                price: selectedAddonForEdit.price,
+                borrowMaximum: selectedAddonForEdit.borrowMaximum,
+                totalStock: selectedAddonForEdit.totalStock,
+                currentlyBorrowed: selectedAddonForEdit.currentlyBorrowed,
               }
             : undefined
         }
       />
+
+      {/* Deactivate Addon Confirmation */}
+      <AnimatePresence>
+        {deleteAddonId !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl flex flex-col gap-4"
+            >
+              <h3 className="text-lg font-bold text-neutral-800">
+                Deactivate Addon
+              </h3>
+              <p className="text-sm text-neutral-600">
+                Are you sure you want to deactivate this addon? It will be hidden from new bookings but preserved in booking history. Addons with active bookings cannot be deactivated.
+              </p>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setDeleteAddonId(null)}
+                  disabled={deleteAddonLoading}
+                  className="flex-1 py-2 rounded-lg font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeactivateAddon}
+                  disabled={deleteAddonLoading}
+                  className="flex-1 py-2 rounded-lg font-semibold text-white bg-orange-600 hover:bg-orange-700 transition-colors disabled:opacity-50"
+                >
+                  {deleteAddonLoading ? "Deactivating..." : "Deactivate"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

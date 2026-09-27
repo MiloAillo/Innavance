@@ -7,6 +7,7 @@ import type {
   AdminUsersResponse,
   AdminSettings,
   StaffPermissions,
+  AdminAddon,
 } from "../types/admin-dashboard.type";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:3000";
@@ -221,6 +222,7 @@ export async function createRoom(data: {
   price: number;
   capacity: number;
   description: string;
+  addonIds?: number[];
 }): Promise<{ id: number; name: string; price: number; capacity: number; description: string }> {
   const response = await adminApi.post("/admins/dashboard/rooms", data);
   return response.data;
@@ -232,6 +234,7 @@ export async function updateRoom(
     price?: number;
     capacity?: number;
     description?: string;
+    addonIds?: number[];
   }
 ): Promise<{ id: number; price: number; capacity: number; description: string }> {
   const response = await adminApi.patch(`/admins/dashboard/rooms/${id}`, data);
@@ -240,5 +243,49 @@ export async function updateRoom(
 
 export async function deleteRoom(id: number): Promise<{ message: string }> {
   const response = await adminApi.delete(`/admins/dashboard/rooms/${id}`);
+  return response.data;
+}
+
+export async function reactivateRoom(id: number): Promise<{ message: string }> {
+  const response = await adminApi.patch(`/admins/dashboard/rooms/${id}/reactivate`);
+  return response.data;
+}
+
+export async function getAddons(): Promise<AdminAddon[]> {
+  const response = await adminApi.get("/admins/dashboard/addons");
+  return response.data;
+}
+
+export async function createAddon(data: {
+  addon: string;
+  price: number;
+  borrowMaximum: number;
+  totalStock: number;
+}): Promise<AdminAddon> {
+  const response = await adminApi.post("/admins/dashboard/addons", data);
+  return response.data;
+}
+
+export async function updateAddon(
+  id: number,
+  data: {
+    addon?: string;
+    price?: number;
+    borrowMaximum?: number;
+    totalStock?: number;
+    isActive?: boolean;
+  }
+): Promise<AdminAddon> {
+  const response = await adminApi.patch(`/admins/dashboard/addons/${id}`, data);
+  return response.data;
+}
+
+export async function deactivateAddon(id: number): Promise<{ message: string }> {
+  const response = await adminApi.patch(`/admins/dashboard/addons/${id}/deactivate`);
+  return response.data;
+}
+
+export async function reactivateAddon(id: number): Promise<{ message: string }> {
+  const response = await adminApi.patch(`/admins/dashboard/addons/${id}/reactivate`);
   return response.data;
 }

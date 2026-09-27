@@ -1,6 +1,6 @@
-import { LogOut, Building2, CalendarDays, Clock3, Settings, Users } from "lucide-react";
+import { LogOut, Building2, CalendarDays, Clock3, Settings, Users, Package } from "lucide-react";
 
-export type AdminView = "home" | "rooms" | "history" | "users" | "settings";
+export type AdminView = "home" | "rooms" | "addons" | "history" | "users" | "settings";
 
 interface AdminSidebarProps {
     activeView: AdminView;
@@ -14,6 +14,7 @@ interface AdminSidebarProps {
 const items: { id: AdminView; label: string; icon: typeof Building2; managerOnly?: boolean }[] = [
     { id: "home", label: "Home", icon: Building2 },
     { id: "rooms", label: "Rooms", icon: CalendarDays },
+    { id: "addons", label: "Addons", icon: Package, managerOnly: true },
     { id: "history", label: "History", icon: Clock3 },
     { id: "users", label: "Users", icon: Users, managerOnly: true },
     { id: "settings", label: "Settings", icon: Settings },

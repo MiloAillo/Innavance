@@ -1,48 +1,40 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { AdminAddonPicker } from "./admin-addon-picker";
-import type { AdminAddon } from "../types/admin-dashboard.type";
 
-interface RoomFormData {
-  name: string;
+interface AddonFormData {
+  addon: string;
   price: number;
-  capacity: number;
-  description: string;
-  addonIds: number[];
+  borrowMaximum: number;
+  totalStock: number;
 }
 
-interface AdminRoomFormProps {
-  initialData?: RoomFormData;
-  onSubmit: (data: RoomFormData) => Promise<void>;
+interface AdminAddonFormProps {
+  initialData?: AddonFormData & { currentlyBorrowed?: number };
+  onSubmit: (data: AddonFormData) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
   mode: "create" | "edit";
-  addons: AdminAddon[];
 }
 
-export function AdminRoomForm({
+export function AdminAddonForm({
   initialData,
   onSubmit,
   onCancel,
   isSubmitting,
   mode,
-  addons,
-}: AdminRoomFormProps) {
-  const [formData, setFormData] = useState<RoomFormData>(
-    initialData || {
-      name: "",
-      price: 0,
-      capacity: 1,
-      description: "",
-      addonIds: [],
-    }
-  );
+}: AdminAddonFormProps) {
+  const [formData, setFormData] = useState<AddonFormData>({
+    addon: initialData?.addon || "",
+    price: initialData?.price || 0,
+    borrowMaximum: initialData?.borrowMaximum || 1,
+    totalStock: initialData?.totalStock || 10,
+  });
 
   const [priceDisplay, setPriceDisplay] = useState<string>(
     initialData?.price ? formatToRupiah(initialData.price) : ""
   );
-  const [capacityDisplay, setCapacityDisplay] = useState<string>(
-    initialData?.capacity ? initialData.capacity.toString() : ""
+  const [totalStockDisplay, setTotalStockDisplay] = useState<string>(
+    initialData?.totalStock ? initialData.totalStock.toString() : ""
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -59,17 +51,25 @@ export function AdminRoomForm({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) newErrors.name = "Room name is required";
-    if (formData.name.length > 225)
-      newErrors.name = "Room name must be less than 225 characters";
+    if (!formData.addon.trim()) newErrors.addon = "Addon name is required";
+    if (formData.addon.length > 50)
+      newErrors.addon = "Addon name must be less than 50 characters";
 
     if (formData.price <= 0) newErrors.price = "Price must be greater than 0";
 
-    if (formData.capacity < 1)
-      newErrors.capacity = "Capacity must be at least 1";
+    if (formData.borrowMaximum < 1)
+      newErrors.borrowMaximum = "Borrow maximum must be at least 1";
 
-    if (!formData.description.trim())
-      newErrors.description = "Description is required";
+    if (formData.totalStock < 1)
+      newErrors.totalStock = "Total stock must be at least 1";
+
+    if (
+      mode === "edit" &&
+      initialData?.currentlyBorrowed !== undefined &&
+      formData.totalStock < initialData.currentlyBorrowed
+    ) {
+      newErrors.totalStock = `Cannot set stock below currently borrowed amount (${initialData.currentlyBorrowed})`;
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -82,7 +82,7 @@ export function AdminRoomForm({
     await onSubmit(formData);
   };
 
-  const updateField = (field: keyof RoomFormData, value: any) => {
+  const updateField = (field: keyof AddonFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => {
@@ -100,11 +100,11 @@ export function AdminRoomForm({
     updateField("price", numericValue);
   };
 
-  const handleCapacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTotalStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === "" || /^\d+$/.test(value)) {
-      setCapacityDisplay(value);
-      updateField("capacity", value === "" ? 0 : parseInt(value, 10));
+      setTotalStockDisplay(value);
+      updateField("totalStock", value === "" ? 0 : parseInt(value, 10));
     }
   };
 
@@ -112,30 +112,30 @@ export function AdminRoomForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <section>
         <h3 className="mb-4 text-lg font-bold text-neutral-800">
-          Room Information
+          Addon Information
         </h3>
         <div className="grid gap-4">
           <div>
             <label className="text-sm font-semibold text-neutral-700">
-              Room Name <span className="text-red-500">*</span>
+              Addon Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              value={formData.name}
-              onChange={(e) => updateField("name", e.target.value)}
+              value={formData.addon}
+              onChange={(e) => updateField("addon", e.target.value)}
               className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
               disabled={isSubmitting}
-              placeholder="e.g., VIP Space"
+              placeholder="e.g., Extra Bed"
             />
-            {errors.name && (
-              <p className="mt-1 text-xs text-red-600">{errors.name}</p>
+            {errors.addon && (
+              <p className="mt-1 text-xs text-red-600">{errors.addon}</p>
             )}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm font-semibold text-neutral-700">
-                Price (per day) <span className="text-red-500">*</span>
+                Price <span className="text-red-500">*</span>
               </label>
               <div className="relative mt-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-500">
@@ -147,7 +147,7 @@ export function AdminRoomForm({
                   onChange={handlePriceChange}
                   className="w-full rounded-md border border-neutral-300 pl-10 pr-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
                   disabled={isSubmitting}
-                  placeholder="100.000"
+                  placeholder="50.000"
                 />
               </div>
               {errors.price && (
@@ -157,54 +157,49 @@ export function AdminRoomForm({
 
             <div>
               <label className="text-sm font-semibold text-neutral-700">
-                Capacity (people) <span className="text-red-500">*</span>
+                Borrow Maximum <span className="text-red-500">*</span>
               </label>
               <input
-                type="text"
-                value={capacityDisplay}
-                onChange={handleCapacityChange}
+                type="number"
+                value={formData.borrowMaximum}
+                onChange={(e) =>
+                  updateField("borrowMaximum", parseInt(e.target.value) || 1)
+                }
+                min={1}
                 className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
                 disabled={isSubmitting}
-                placeholder="2"
               />
-              {errors.capacity && (
-                <p className="mt-1 text-xs text-red-600">{errors.capacity}</p>
+              {errors.borrowMaximum && (
+                <p className="mt-1 text-xs text-red-600">
+                  {errors.borrowMaximum}
+                </p>
               )}
             </div>
           </div>
 
           <div>
             <label className="text-sm font-semibold text-neutral-700">
-              Description <span className="text-red-500">*</span>
+              Total Stock <span className="text-red-500">*</span>
             </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => updateField("description", e.target.value)}
-              rows={4}
+            <input
+              type="text"
+              value={totalStockDisplay}
+              onChange={handleTotalStockChange}
               className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
               disabled={isSubmitting}
-              placeholder="Describe the room features..."
+              placeholder="10"
             />
-            {errors.description && (
-              <p className="mt-1 text-xs text-red-600">{errors.description}</p>
+            {mode === "edit" && initialData?.currentlyBorrowed !== undefined && (
+              <p className="mt-1 text-xs text-neutral-500">
+                Currently Borrowed: {initialData.currentlyBorrowed} /{" "}
+                {formData.totalStock}
+              </p>
+            )}
+            {errors.totalStock && (
+              <p className="mt-1 text-xs text-red-600">{errors.totalStock}</p>
             )}
           </div>
         </div>
-      </section>
-
-      <section>
-        <h3 className="mb-4 text-lg font-bold text-neutral-800">
-          Available Addons
-        </h3>
-        <p className="mb-3 text-sm text-neutral-600">
-          Select which addons guests can choose when booking this room
-        </p>
-        <AdminAddonPicker
-          addons={addons}
-          selectedAddonIds={formData.addonIds}
-          onChange={(addonIds) => updateField("addonIds", addonIds)}
-          disabled={isSubmitting}
-        />
       </section>
 
       <div className="flex gap-3 border-t border-neutral-200 pt-6">
@@ -221,16 +216,8 @@ export function AdminRoomForm({
           disabled={isSubmitting}
           className="flex-1 rounded-lg bg-green-500 px-4 py-2.5 font-semibold text-white hover:bg-green-600 disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="animate-spin" size={18} />
-              {mode === "create" ? "Creating..." : "Updating..."}
-            </>
-          ) : mode === "create" ? (
-            "Create Room"
-          ) : (
-            "Update Room"
-          )}
+          {isSubmitting && <Loader2 className="animate-spin" size={18} />}
+          {mode === "create" ? "Create Addon" : "Update Addon"}
         </button>
       </div>
     </form>

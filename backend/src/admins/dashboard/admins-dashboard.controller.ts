@@ -26,6 +26,8 @@ import { UpdateSettingsDto } from '../dto/update-settings.dto';
 import { UpdateStaffPermissionsDto } from '../dto/update-staff-permissions.dto';
 import { CreateRoomDto } from '../dto/create-room.dto';
 import { UpdateRoomDto } from '../dto/update-room.dto';
+import { CreateAddonDto } from '../dto/create-addon.dto';
+import { UpdateAddonDto } from '../dto/update-addon.dto';
 
 @Controller('admins/dashboard')
 @UseGuards(jwtAuthGuard.JwtAuthGuard)
@@ -74,6 +76,62 @@ export class AdminsDashboardController {
     @Req() request: jwtAuthGuard.RequestWithJWTPayload,
   ) {
     return await this.adminsDasboardService.deleteRoom(request, roomId);
+  }
+
+  // PATCH admins/dashboard/rooms/:id/reactivate => reactivate soft-deleted room (manager only)
+  @Patch('rooms/:id/reactivate')
+  async reactivateRoom(
+    @Param('id', ParseIntPipe) roomId: number,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.reactivateRoom(request, roomId);
+  }
+
+  // GET admins/dashboard/addons      =>      get all addons (active and inactive)
+  @Get('addons')
+  async getAddons() {
+    return await this.adminsDasboardService.getAddons();
+  }
+
+  // POST admins/dashboard/addons     =>      create new addon (manager only)
+  @Post('addons')
+  async createAddon(
+    @Body() createAddonDto: CreateAddonDto,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.createAddon(request, createAddonDto);
+  }
+
+  // PATCH admins/dashboard/addons/:id => update addon (manager only)
+  @Patch('addons/:id')
+  async updateAddon(
+    @Param('id', ParseIntPipe) addonId: number,
+    @Body() updateAddonDto: UpdateAddonDto,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.updateAddon(
+      request,
+      addonId,
+      updateAddonDto,
+    );
+  }
+
+  // PATCH admins/dashboard/addons/:id/deactivate => deactivate addon (manager only)
+  @Patch('addons/:id/deactivate')
+  async deactivateAddon(
+    @Param('id', ParseIntPipe) addonId: number,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.deactivateAddon(request, addonId);
+  }
+
+  // PATCH admins/dashboard/addons/:id/reactivate => reactivate addon (manager only)
+  @Patch('addons/:id/reactivate')
+  async reactivateAddon(
+    @Param('id', ParseIntPipe) addonId: number,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.reactivateAddon(request, addonId);
   }
 
   // GET admins/dashboard/bookings   =>      get paginated bookings detail and its related room

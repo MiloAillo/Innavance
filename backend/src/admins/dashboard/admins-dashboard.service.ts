@@ -42,6 +42,8 @@ import { UpdateSettingsDto } from '../dto/update-settings.dto';
 import { UpdateStaffPermissionsDto } from '../dto/update-staff-permissions.dto';
 import { CreateRoomDto } from '../dto/create-room.dto';
 import { UpdateRoomDto } from '../dto/update-room.dto';
+import { CreateAddonDto } from '../dto/create-addon.dto';
+import { UpdateAddonDto } from '../dto/update-addon.dto';
 import * as bcrypt from 'bcrypt';
 import { EncryptionService } from 'src/helper/encryption.service';
 
@@ -992,6 +994,20 @@ export class AdminsDashboardService {
     if (adminUser.type !== 'manager')
       throw new ForbiddenException('Only managers can create rooms');
 
+    // Validate addon IDs if provided
+    if (createRoomDto.addonIds && createRoomDto.addonIds.length > 0) {
+      const addons = await this.prisma.addons.findMany({
+        where: {
+          id: { in: createRoomDto.addonIds },
+          isActive: true,
+        },
+      });
+
+      if (addons.length !== createRoomDto.addonIds.length) {
+        throw new BadRequestException('One or more addon IDs are invalid or inactive');
+      }
+    }
+
     const room = await this.prisma.rooms.create({
       data: {
         name: createRoomDto.name,
@@ -1004,6 +1020,16 @@ export class AdminsDashboardService {
         waterOutput: 0,
       },
     });
+
+    // Create room-addon ties if provided
+    if (createRoomDto.addonIds && createRoomDto.addonIds.length > 0) {
+      await this.prisma.roomsAddons.createMany({
+        data: createRoomDto.addonIds.map((addonId) => ({
+          room_id: room.id,
+          addon_id: addonId,
+        })),
+      });
+    }
 
     return room;
   }
@@ -1028,6 +1054,38 @@ export class AdminsDashboardService {
     if (!room) throw new NotFoundException('Room not found');
     if (room.deletedAt)
       throw new BadRequestException('Cannot update a deleted room');
+
+    // Validate addon IDs if provided
+    if (updateRoomDto.addonIds && updateRoomDto.addonIds.length > 0) {
+      const addons = await this.prisma.addons.findMany({
+        where: {
+          id: { in: updateRoomDto.addonIds },
+          isActive: true,
+        },
+      });
+
+      if (addons.length !== updateRoomDto.addonIds.length) {
+        throw new BadRequestException('One or more addon IDs are invalid or inactive');
+      }
+    }
+
+    // Update room-addon ties if provided
+    if (updateRoomDto.addonIds !== undefined) {
+      // Delete existing ties
+      await this.prisma.roomsAddons.deleteMany({
+        where: { room_id: roomId },
+      });
+
+      // Create new ties
+      if (updateRoomDto.addonIds.length > 0) {
+        await this.prisma.roomsAddons.createMany({
+          data: updateRoomDto.addonIds.map((addonId) => ({
+            room_id: roomId,
+            addon_id: addonId,
+          })),
+        });
+      }
+    }
 
     const updatedRoom = await this.prisma.rooms.update({
       where: { id: roomId },
@@ -1084,5 +1142,176 @@ export class AdminsDashboardService {
     });
 
     return { message: 'Room deleted successfully' };
+  }
+
+  async reactivateRoom(
+    request: RequestWithJWTPayload,
+    roomId: number,
+  ) {
+    const adminUser = await this.prisma.adminUsers.findUnique({
+      where: { id: request.user.id },
+    });
+
+    if (!adminUser) throw new NotFoundException('Admin user not found');
+    if (adminUser.type !== 'manager')
+      throw new ForbiddenException('Only managers can reactivate rooms');
+
+    const room = await this.prisma.rooms.findUnique({
+      where: { id: roomId },
+    });
+
+    if (!room) throw new NotFoundException('Room not found');
+    if (!room.deletedAt)
+      throw new BadRequestException('Room is not deleted');
+
+    await this.prisma.rooms.update({
+      where: { id: roomId },
+      data: {
+        deletedAt: null,
+      },
+    });
+
+    return { message: 'Room reactivated successfully' };
+  }
+
+  async getAddons() {
+    const addons = await this.prisma.addons.findMany({
+      orderBy: {
+        addon: 'asc',
+      },
+    });
+
+    return addons;
+  }
+
+  async createAddon(
+    request: RequestWithJWTPayload,
+    createAddonDto: CreateAddonDto,
+  ) {
+    const adminUser = await this.prisma.adminUsers.findUnique({
+      where: { id: request.user.id },
+    });
+
+    if (!adminUser) throw new NotFoundException('Admin user not found');
+    if (adminUser.type !== 'manager')
+      throw new ForbiddenException('Only managers can create addons');
+
+    const addon = await this.prisma.addons.create({
+      data: {
+        addon: createAddonDto.addon,
+        price: createAddonDto.price,
+        borrowMaximum: createAddonDto.borrowMaximum,
+        totalStock: createAddonDto.totalStock,
+        currentlyBorrowed: 0,
+        isActive: true,
+      },
+    });
+
+    return addon;
+  }
+
+  async updateAddon(
+    request: RequestWithJWTPayload,
+    addonId: number,
+    updateAddonDto: UpdateAddonDto,
+  ) {
+    const adminUser = await this.prisma.adminUsers.findUnique({
+      where: { id: request.user.id },
+    });
+
+    if (!adminUser) throw new NotFoundException('Admin user not found');
+    if (adminUser.type !== 'manager')
+      throw new ForbiddenException('Only managers can update addons');
+
+    const addon = await this.prisma.addons.findUnique({
+      where: { id: addonId },
+    });
+
+    if (!addon) throw new NotFoundException('Addon not found');
+
+    if (
+      updateAddonDto.totalStock !== undefined &&
+      updateAddonDto.totalStock < addon.currentlyBorrowed
+    )
+      throw new BadRequestException(
+        `Cannot set total stock (${updateAddonDto.totalStock}) below currently borrowed amount (${addon.currentlyBorrowed})`,
+      );
+
+    const updatedAddon = await this.prisma.addons.update({
+      where: { id: addonId },
+      data: updateAddonDto,
+    });
+
+    return updatedAddon;
+  }
+
+  async deactivateAddon(request: RequestWithJWTPayload, addonId: number) {
+    const adminUser = await this.prisma.adminUsers.findUnique({
+      where: { id: request.user.id },
+    });
+
+    if (!adminUser) throw new NotFoundException('Admin user not found');
+    if (adminUser.type !== 'manager')
+      throw new ForbiddenException('Only managers can deactivate addons');
+
+    const addon = await this.prisma.addons.findUnique({
+      where: { id: addonId },
+    });
+
+    if (!addon) throw new NotFoundException('Addon not found');
+    if (!addon.isActive)
+      throw new BadRequestException('Addon is already deactivated');
+
+    const activeBookingsCount = await this.prisma.bookingsAddons.count({
+      where: {
+        addon_id: addonId,
+        addonBooking: {
+          status: {
+            in: ['on_hold', 'checked_in', 'checking_out'],
+          },
+        },
+      },
+    });
+
+    if (activeBookingsCount > 0)
+      throw new BadRequestException(
+        `Cannot deactivate addon. It has ${activeBookingsCount} active booking(s).`,
+      );
+
+    await this.prisma.addons.update({
+      where: { id: addonId },
+      data: {
+        isActive: false,
+      },
+    });
+
+    return { message: 'Addon deactivated successfully' };
+  }
+
+  async reactivateAddon(request: RequestWithJWTPayload, addonId: number) {
+    const adminUser = await this.prisma.adminUsers.findUnique({
+      where: { id: request.user.id },
+    });
+
+    if (!adminUser) throw new NotFoundException('Admin user not found');
+    if (adminUser.type !== 'manager')
+      throw new ForbiddenException('Only managers can reactivate addons');
+
+    const addon = await this.prisma.addons.findUnique({
+      where: { id: addonId },
+    });
+
+    if (!addon) throw new NotFoundException('Addon not found');
+    if (addon.isActive)
+      throw new BadRequestException('Addon is already active');
+
+    await this.prisma.addons.update({
+      where: { id: addonId },
+      data: {
+        isActive: true,
+      },
+    });
+
+    return { message: 'Addon reactivated successfully' };
   }
 }

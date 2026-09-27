@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle } from "lucide-react";
 import { AdminRoomForm } from "./admin-room-form";
+import type { AdminAddon } from "../types/admin-dashboard.type";
 
 interface RoomFormData {
   name: string;
   price: number;
   capacity: number;
   description: string;
+  addonIds: number[];
 }
 
 interface AdminRoomModalProps {
@@ -16,6 +18,7 @@ interface AdminRoomModalProps {
   onSubmit: (data: RoomFormData) => Promise<void>;
   mode: "create" | "edit";
   initialData?: RoomFormData;
+  addons: AdminAddon[];
 }
 
 export function AdminRoomModal({
@@ -24,6 +27,7 @@ export function AdminRoomModal({
   onSubmit,
   mode,
   initialData,
+  addons,
 }: AdminRoomModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -109,6 +113,7 @@ export function AdminRoomModal({
                       onCancel={handleClose}
                       isSubmitting={isSubmitting}
                       mode={mode}
+                      addons={addons}
                     />
                   </div>
                 </>
