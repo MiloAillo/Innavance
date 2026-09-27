@@ -1,13 +1,18 @@
 import { motion } from "framer-motion";
-import { DoorOpen, Droplets, Lock, Unlock, Zap, Key, Plus } from "lucide-react";
+import { DoorOpen, Droplets, Lock, Unlock, Zap, Key, Plus, MoreVertical } from "lucide-react";
 import type { AdminRoom } from "../types/admin-dashboard.type";
+import { useState } from "react";
 
 interface RoomCardProps {
   room: AdminRoom;
   onCreateBooking?: (room: AdminRoom) => void;
+  onEdit?: (room: AdminRoom) => void;
+  onDelete?: (roomId: number) => void;
+  isManager?: boolean;
 }
 
-export function RoomCard({ room, onCreateBooking }: RoomCardProps) {
+export function RoomCard({ room, onCreateBooking, onEdit, onDelete, isManager }: RoomCardProps) {
+    const [showMenu, setShowMenu] = useState(false);
     const booking = room.bookings[0];
     const statusLabel = booking
         ? booking.status
@@ -17,16 +22,56 @@ export function RoomCard({ room, onCreateBooking }: RoomCardProps) {
         : null;
 
     return (
-        <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm flex flex-col justify-between ">
+        <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm flex flex-col justify-between relative">
             <div>
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <p className="text-lg font-bold text-neutral-800">{room.name}</p>
                         <p className="mt-1 text-sm text-neutral-500">{room.capacity} guests · Rp {room.price.toLocaleString("id-ID")}</p>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${room.isAvailable ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
-                        {room.isAvailable ? "Available" : "Occupied"}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${room.isAvailable ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                            {room.isAvailable ? "Available" : "Occupied"}
+                        </span>
+                        {isManager && onEdit && onDelete && (
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowMenu(!showMenu)}
+                                    className="rounded-full p-1 hover:bg-neutral-100 transition-colors"
+                                >
+                                    <MoreVertical size={18} className="text-neutral-600" />
+                                </button>
+                                {showMenu && (
+                                    <>
+                                        <div
+                                            className="fixed inset-0 z-10"
+                                            onClick={() => setShowMenu(false)}
+                                        />
+                                        <div className="absolute right-0 top-8 z-20 w-40 rounded-lg border border-neutral-200 bg-white shadow-lg overflow-hidden">
+                                            <button
+                                                onClick={() => {
+                                                    onEdit(room);
+                                                    setShowMenu(false);
+                                                }}
+                                                className="w-full px-4 py-2 text-left text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    onDelete(room.id);
+                                                    setShowMenu(false);
+                                                }}
+                                                className="w-full px-4 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
                 {booking && (
                     <div className="mt-5 rounded-lg bg-neutral-50 p-3 text-sm space-y-1">

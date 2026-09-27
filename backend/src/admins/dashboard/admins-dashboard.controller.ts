@@ -24,6 +24,8 @@ import { approveQueueDto } from '../dto/approve-queue.dto';
 import { CreateStaffDto } from '../dto/create-staff.dto';
 import { UpdateSettingsDto } from '../dto/update-settings.dto';
 import { UpdateStaffPermissionsDto } from '../dto/update-staff-permissions.dto';
+import { CreateRoomDto } from '../dto/create-room.dto';
+import { UpdateRoomDto } from '../dto/update-room.dto';
 
 @Controller('admins/dashboard')
 @UseGuards(jwtAuthGuard.JwtAuthGuard)
@@ -40,6 +42,38 @@ export class AdminsDashboardController {
   @Get('rooms')
   async getRooms(@Query() roomQueryDto: RoomQueryDto) {
     return await this.adminsDasboardService.getRooms(roomQueryDto);
+  }
+
+  // POST admins/dashboard/rooms      =>      create new room (manager only)
+  @Post('rooms')
+  async createRoom(
+    @Body() createRoomDto: CreateRoomDto,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.createRoom(request, createRoomDto);
+  }
+
+  // PATCH admins/dashboard/rooms/:id =>      update room (manager only)
+  @Patch('rooms/:id')
+  async updateRoom(
+    @Param('id', ParseIntPipe) roomId: number,
+    @Body() updateRoomDto: UpdateRoomDto,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.updateRoom(
+      request,
+      roomId,
+      updateRoomDto,
+    );
+  }
+
+  // DELETE admins/dashboard/rooms/:id =>     soft delete room (manager only)
+  @Delete('rooms/:id')
+  async deleteRoom(
+    @Param('id', ParseIntPipe) roomId: number,
+    @Req() request: jwtAuthGuard.RequestWithJWTPayload,
+  ) {
+    return await this.adminsDasboardService.deleteRoom(request, roomId);
   }
 
   // GET admins/dashboard/bookings   =>      get paginated bookings detail and its related room

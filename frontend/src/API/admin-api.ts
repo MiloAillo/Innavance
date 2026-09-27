@@ -215,3 +215,30 @@ export async function createStaff(data: {
 export async function deleteStaff(id: number): Promise<void> {
   await adminApi.delete(`/admins/dashboard/users/${id}`);
 }
+
+export async function createRoom(data: {
+  name: string;
+  price: number;
+  capacity: number;
+  description: string;
+}): Promise<{ id: number; name: string; price: number; capacity: number; description: string }> {
+  const response = await adminApi.post("/admins/dashboard/rooms", data);
+  return response.data;
+}
+
+export async function updateRoom(
+  id: number,
+  data: {
+    price?: number;
+    capacity?: number;
+    description?: string;
+  }
+): Promise<{ id: number; price: number; capacity: number; description: string }> {
+  const response = await adminApi.patch(`/admins/dashboard/rooms/${id}`, data);
+  return response.data;
+}
+
+export async function deleteRoom(id: number): Promise<{ message: string }> {
+  const response = await adminApi.delete(`/admins/dashboard/rooms/${id}`);
+  return response.data;
+}

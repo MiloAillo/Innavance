@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { RequestWithJWTPayload } from '../guard/jwt-auth-guard.guard';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -39,6 +40,8 @@ import { approveQueueDto } from '../dto/approve-queue.dto';
 import { CreateStaffDto } from '../dto/create-staff.dto';
 import { UpdateSettingsDto } from '../dto/update-settings.dto';
 import { UpdateStaffPermissionsDto } from '../dto/update-staff-permissions.dto';
+import { CreateRoomDto } from '../dto/create-room.dto';
+import { UpdateRoomDto } from '../dto/update-room.dto';
 import * as bcrypt from 'bcrypt';
 import { EncryptionService } from 'src/helper/encryption.service';
 
@@ -114,6 +117,7 @@ export class AdminsDashboardService {
             contains: room_name,
           },
           bookings: whereBookingsConstraintORM,
+          deletedAt: null,
         },
         include: {
           bookings: include_booking
@@ -160,6 +164,7 @@ export class AdminsDashboardService {
             contains: room_name,
           },
           bookings: whereBookingsConstraintORM,
+          deletedAt: null,
         },
       }),
     ]);
@@ -973,5 +978,111 @@ export class AdminsDashboardService {
         },
       },
     );
+  }
+
+  async createRoom(
+    request: RequestWithJWTPayload,
+    createRoomDto: CreateRoomDto,
+  ) {
+    const adminUser = await this.prisma.adminUsers.findUnique({
+      where: { id: request.user.id },
+    });
+
+    if (!adminUser) throw new NotFoundException('Admin user not found');
+    if (adminUser.type !== 'manager')
+      throw new ForbiddenException('Only managers can create rooms');
+
+    const room = await this.prisma.rooms.create({
+      data: {
+        name: createRoomDto.name,
+        price: createRoomDto.price,
+        capacity: createRoomDto.capacity,
+        description: createRoomDto.description,
+        smartDoorIsLocked: true,
+        smartDoorIsOpened: false,
+        electricityOutput: 0,
+        waterOutput: 0,
+      },
+    });
+
+    return room;
+  }
+
+  async updateRoom(
+    request: RequestWithJWTPayload,
+    roomId: number,
+    updateRoomDto: UpdateRoomDto,
+  ) {
+    const adminUser = await this.prisma.adminUsers.findUnique({
+      where: { id: request.user.id },
+    });
+
+    if (!adminUser) throw new NotFoundException('Admin user not found');
+    if (adminUser.type !== 'manager')
+      throw new ForbiddenException('Only managers can edit rooms');
+
+    const room = await this.prisma.rooms.findUnique({
+      where: { id: roomId },
+    });
+
+    if (!room) throw new NotFoundException('Room not found');
+    if (room.deletedAt)
+      throw new BadRequestException('Cannot update a deleted room');
+
+    const updatedRoom = await this.prisma.rooms.update({
+      where: { id: roomId },
+      data: {
+        ...(updateRoomDto.price !== undefined && { price: updateRoomDto.price }),
+        ...(updateRoomDto.capacity !== undefined && {
+          capacity: updateRoomDto.capacity,
+        }),
+        ...(updateRoomDto.description !== undefined && {
+          description: updateRoomDto.description,
+        }),
+      },
+    });
+
+    return updatedRoom;
+  }
+
+  async deleteRoom(request: RequestWithJWTPayload, roomId: number) {
+    const adminUser = await this.prisma.adminUsers.findUnique({
+      where: { id: request.user.id },
+    });
+
+    if (!adminUser) throw new NotFoundException('Admin user not found');
+    if (adminUser.type !== 'manager')
+      throw new ForbiddenException('Only managers can delete rooms');
+
+    const room = await this.prisma.rooms.findUnique({
+      where: { id: roomId },
+      include: {
+        bookings: {
+          where: {
+            status: {
+              in: ['on_hold', 'checked_in', 'checking_out'],
+            },
+          },
+        },
+      },
+    });
+
+    if (!room) throw new NotFoundException('Room not found');
+    if (room.deletedAt)
+      throw new BadRequestException('Room is already deleted');
+
+    if (room.bookings.length > 0)
+      throw new BadRequestException(
+        'Cannot delete room with active bookings. Please wait for all bookings to be completed or rejected.',
+      );
+
+    await this.prisma.rooms.update({
+      where: { id: roomId },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    return { message: 'Room deleted successfully' };
   }
 }

@@ -26,6 +26,9 @@ import {
   markAddonServed,
   updateBookingSettings,
   updateStaffPermissions,
+  createRoom,
+  updateRoom,
+  deleteRoom,
 } from "../../API/admin-api";
 import type {
   AdminBookingsResponse,
@@ -40,6 +43,7 @@ import { BookingCard } from "../../components/admin-booking-card";
 import { RoomCard } from "../../components/admin-room-card";
 import { useViewPolling } from "../../hooks/useViewPolling";
 import { AdminBookingModal } from "../../components/admin-booking-modal";
+import { AdminRoomModal } from "../../components/admin-room-modal";
 
 interface PaginationProps {
   page: number;
@@ -176,6 +180,13 @@ export function AdminDashboard(): JSX.Element {
   const [selectedRoom, setSelectedRoom] = useState<AdminRoom | null>(null);
   const [highlightBookingId, setHighlightBookingId] = useState<number | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Room Modal State
+  const [showRoomModal, setShowRoomModal] = useState(false);
+  const [roomModalMode, setRoomModalMode] = useState<"create" | "edit">("create");
+  const [selectedRoomForEdit, setSelectedRoomForEdit] = useState<AdminRoom | null>(null);
+  const [deleteRoomId, setDeleteRoomId] = useState<number | null>(null);
+  const [deleteRoomLoading, setDeleteRoomLoading] = useState(false);
 
   const isManager = userInfo?.type === "manager";
   const canApprove =
@@ -566,6 +577,63 @@ export function AdminDashboard(): JSX.Element {
     }, 100);
   };
 
+  const handleCreateRoom = () => {
+    setRoomModalMode("create");
+    setSelectedRoomForEdit(null);
+    setShowRoomModal(true);
+  };
+
+  const handleEditRoom = (room: AdminRoom) => {
+    setRoomModalMode("edit");
+    setSelectedRoomForEdit(room);
+    setShowRoomModal(true);
+  };
+
+  const handleRoomSubmit = async (data: {
+    name: string;
+    price: number;
+    capacity: number;
+    description: string;
+  }) => {
+    try {
+      if (roomModalMode === "create") {
+        await createRoom(data);
+        setSuccessToast("Room created successfully!");
+      } else if (selectedRoomForEdit) {
+        await updateRoom(selectedRoomForEdit.id, {
+          price: data.price,
+          capacity: data.capacity,
+          description: data.description,
+        });
+        setSuccessToast("Room updated successfully!");
+      }
+      await loadRoomsData();
+      setTimeout(() => setSuccessToast(null), 5000);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleDeleteRoom = (roomId: number) => {
+    setDeleteRoomId(roomId);
+  };
+
+  const confirmDeleteRoom = async () => {
+    if (!deleteRoomId) return;
+    setDeleteRoomLoading(true);
+    try {
+      await deleteRoom(deleteRoomId);
+      setDeleteRoomId(null);
+      setSuccessToast("Room deleted successfully!");
+      await loadRoomsData();
+      setTimeout(() => setSuccessToast(null), 5000);
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to delete room");
+    } finally {
+      setDeleteRoomLoading(false);
+    }
+  };
+
   if (loading)
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-neutral-50">
@@ -904,11 +972,22 @@ export function AdminDashboard(): JSX.Element {
         )}
         {view === "rooms" && (
           <div className="flex flex-col gap-6">
-            <section>
-              <h2 className="text-2xl font-bold text-neutral-800">Rooms</h2>
-              <p className="text-sm text-neutral-500">
-                Real-time status of smart units
-              </p>
+            <section className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-neutral-800">Rooms</h2>
+                <p className="text-sm text-neutral-500">
+                  Real-time status of smart units
+                </p>
+              </div>
+              {isManager && (
+                <button
+                  onClick={handleCreateRoom}
+                  className="flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-600 transition-colors"
+                >
+                  <UserPlus size={18} />
+                  Add Room
+                </button>
+              )}
             </section>
             <div className="flex flex-wrap items-center gap-2">
               <input
@@ -968,7 +1047,14 @@ export function AdminDashboard(): JSX.Element {
             {rooms?.data.length ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {rooms.data.map((room) => (
-                  <RoomCard key={room.id} room={room} onCreateBooking={handleCreateBooking} />
+                  <RoomCard 
+                    key={room.id} 
+                    room={room} 
+                    onCreateBooking={handleCreateBooking}
+                    onEdit={handleEditRoom}
+                    onDelete={handleDeleteRoom}
+                    isManager={isManager}
+                  />
                 ))}
               </div>
             ) : (
@@ -1799,6 +1885,48 @@ export function AdminDashboard(): JSX.Element {
         )}
       </AnimatePresence>
 
+      {/* Delete Room Confirmation Modal */}
+      <AnimatePresence>
+        {deleteRoomId !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl flex flex-col gap-4"
+            >
+              <h3 className="text-lg font-bold text-neutral-800">
+                Delete Room
+              </h3>
+              <p className="text-sm text-neutral-600">
+                Are you sure you want to delete this room? This action will soft delete the room and it won't be available anymore. Rooms with active bookings cannot be deleted.
+              </p>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setDeleteRoomId(null)}
+                  disabled={deleteRoomLoading}
+                  className="flex-1 py-2 rounded-lg font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteRoom}
+                  disabled={deleteRoomLoading}
+                  className="flex-1 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {deleteRoomLoading ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Booking Modal */}
       <AdminBookingModal
         room={selectedRoom}
@@ -1808,6 +1936,27 @@ export function AdminDashboard(): JSX.Element {
           setSelectedRoom(null);
         }}
         onSuccess={handleBookingSuccess}
+      />
+
+      {/* Room Modal */}
+      <AdminRoomModal
+        isOpen={showRoomModal}
+        onClose={() => {
+          setShowRoomModal(false);
+          setSelectedRoomForEdit(null);
+        }}
+        onSubmit={handleRoomSubmit}
+        mode={roomModalMode}
+        initialData={
+          selectedRoomForEdit
+            ? {
+                name: selectedRoomForEdit.name,
+                price: selectedRoomForEdit.price,
+                capacity: selectedRoomForEdit.capacity,
+                description: "",
+              }
+            : undefined
+        }
       />
     </div>
   );
