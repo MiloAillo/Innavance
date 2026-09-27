@@ -30,10 +30,36 @@ export class AdminDasboardProcessor extends WorkerHost {
         });
         if (!adminSettings) throw new InternalServerErrorException();
 
+        const booking = await this.prisma.bookings.findUnique({
+          where: { id: booking_id },
+          include: { bookingsAddons: true },
+        });
+
+        if (!booking) {
+          throw new InternalServerErrorException(
+            `Booking ${booking_id} not found`,
+          );
+        }
+
+        // notify the client first
+        await axios.post(
+          `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+          {
+            phone_number: phone_number,
+            message: `You has been forced to checked out from ${room_name} at Innavance.\nThe door PIN and Dashboard is now unusable.\nWe are aware of our decision and we are very sorry for it to be this way. 😉\n`,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+          },
+        );
+
         // update the booking to checked out
         await this.prisma.bookings.update({
           where: { id: booking_id },
-          data: { 
+          data: {
             status: 'checked_out',
             checkedOutAt: new Date(),
           },
@@ -49,20 +75,16 @@ export class AdminDasboardProcessor extends WorkerHost {
           },
         });
 
-        // notify the client
-        await axios.post(
-          `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-          {
-            phone_number: phone_number,
-            message: `You has been forced to checked out from ${room_name} at Innavance.\nThe door PIN and Dashboard is now unusable.\nWe are aware of our decision and we are very sorry for it to be this way. 😉\n`,
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
+        for (const bookingAddon of booking.bookingsAddons) {
+          await this.prisma.addons.update({
+            where: { id: bookingAddon.addon_id },
+            data: {
+              currentlyBorrowed: {
+                decrement: bookingAddon.count,
+              },
             },
-          },
-        );
+          });
+        }
 
         break;
       }

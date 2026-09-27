@@ -31,23 +31,28 @@ export function AdminRoomModal({
 }: AdminRoomModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
       setIsSubmitting(false);
       setShowSuccess(false);
+      setErrorMessage(null);
     }
   }, [isOpen]);
 
   const handleSubmit = async (data: RoomFormData) => {
     setIsSubmitting(true);
+    setErrorMessage(null);
     try {
       await onSubmit(data);
       setShowSuccess(true);
       setTimeout(() => {
         onClose();
       }, 1500);
-    } catch (error) {
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Failed to save room. Please try again.";
+      setErrorMessage(message);
       setIsSubmitting(false);
     }
   };
@@ -114,6 +119,8 @@ export function AdminRoomModal({
                       isSubmitting={isSubmitting}
                       mode={mode}
                       addons={addons}
+                      errorMessage={errorMessage}
+                      onErrorDismiss={() => setErrorMessage(null)}
                     />
                   </div>
                 </>

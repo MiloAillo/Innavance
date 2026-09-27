@@ -341,9 +341,14 @@ export class AdminsDashboardService {
               }
             : {}),
           bookingsAddons: {
-            include: {
+            select: {
+              count: true,
+              priceAtBooking: true,
               addonAddon: {
-                select: { addon: true },
+                select: { 
+                  addon: true,
+                  price: true,
+                },
               },
             },
           },
@@ -381,11 +386,15 @@ export class AdminsDashboardService {
       throw new NotFoundException('Booking not found');
     }
 
+    if (!booking.nik || booking.nik === '') {
+      return { nik: '[No NIK Data]' };
+    }
+
     try {
       const decryptedNIK = this.encryptionService.decrypt(booking.nik);
       return { nik: decryptedNIK };
     } catch (error) {
-      throw new InternalServerErrorException('Failed to decrypt NIK');
+      return { nik: '[Decryption Failed]' };
     }
   }
 
@@ -784,6 +793,11 @@ export class AdminsDashboardService {
         },
       });
 
+      const bookingWithAddons = await this.prisma.bookings.findUnique({
+        where: { id: booking.id },
+        include: { bookingsAddons: true },
+      });
+
       // notify the client
       await axios.post(
         `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
@@ -798,6 +812,19 @@ export class AdminsDashboardService {
           },
         },
       );
+
+      if (bookingWithAddons) {
+        for (const bookingAddon of bookingWithAddons.bookingsAddons) {
+          await this.prisma.addons.update({
+            where: { id: bookingAddon.addon_id },
+            data: {
+              currentlyBorrowed: {
+                decrement: bookingAddon.count,
+              },
+            },
+          });
+        }
+      }
     }
   }
 
@@ -825,16 +852,6 @@ export class AdminsDashboardService {
     });
     if (!booking) throw new NotFoundException();
 
-    await this.prisma.bookings.update({
-      where: { id: booking.id },
-      data: { status: 'rejected' },
-    });
-
-    await this.prisma.rooms.update({
-      where: { id: booking.room_id },
-      data: { isAvailable: true },
-    });
-
     await axios.post(
       `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
       {
@@ -849,6 +866,36 @@ export class AdminsDashboardService {
         timeout: 10000,
       },
     );
+
+    await this.prisma.bookings.update({
+      where: { id: booking.id },
+      data: { status: 'rejected' },
+    });
+
+    await this.prisma.rooms.update({
+      where: { id: booking.room_id },
+      data: { isAvailable: true },
+    });
+
+    const bookingWithAddons = await this.prisma.bookings.findUnique({
+      where: { id: booking.id },
+      include: { bookingsAddons: true },
+    });
+
+    if (bookingWithAddons) {
+      for (const bookingAddon of bookingWithAddons.bookingsAddons) {
+        await this.prisma.addons.update({
+          where: { id: bookingAddon.addon_id },
+          data: {
+            currentlyBorrowed: {
+              decrement: bookingAddon.count,
+            },
+          },
+        });
+      }
+    }
+
+    return { message: 'Booking rejected successfully' };
   }
 
   async createStaff(
@@ -1069,6 +1116,43 @@ export class AdminsDashboardService {
       }
     }
 
+    // Validate room-addon changes against active bookings
+    if (updateRoomDto.addonIds !== undefined) {
+      // Get current addon ties for this room
+      const currentAddons = await this.prisma.roomsAddons.findMany({
+        where: { room_id: roomId },
+        select: { addon_id: true },
+      });
+      const currentAddonIds = currentAddons.map((a) => a.addon_id);
+
+      // Determine which addons are being removed
+      const newAddonIds = updateRoomDto.addonIds;
+      const removedAddonIds = currentAddonIds.filter(
+        (id) => !newAddonIds.includes(id),
+      );
+
+      // Check if any active bookings for THIS ROOM use the addons being removed
+      if (removedAddonIds.length > 0) {
+        const activeBookingsWithRemovedAddons =
+          await this.prisma.bookingsAddons.count({
+            where: {
+              addon_id: { in: removedAddonIds },
+              addonBooking: {
+                room_id: roomId,
+                status: { in: ['on_hold', 'checked_in', 'checking_out'] },
+              },
+            },
+          });
+
+        if (activeBookingsWithRemovedAddons > 0) {
+          throw new BadRequestException(
+            `Cannot remove addons that are currently in ${activeBookingsWithRemovedAddons} active booking(s) for this room. ` +
+              `Please wait for all bookings to complete before modifying room addons.`,
+          );
+        }
+      }
+    }
+
     // Update room-addon ties if provided
     if (updateRoomDto.addonIds !== undefined) {
       // Delete existing ties
@@ -1229,13 +1313,37 @@ export class AdminsDashboardService {
 
     if (!addon) throw new NotFoundException('Addon not found');
 
-    if (
-      updateAddonDto.totalStock !== undefined &&
-      updateAddonDto.totalStock < addon.currentlyBorrowed
-    )
-      throw new BadRequestException(
-        `Cannot set total stock (${updateAddonDto.totalStock}) below currently borrowed amount (${addon.currentlyBorrowed})`,
-      );
+    if (updateAddonDto.totalStock !== undefined) {
+      // Check current borrowed amount
+      if (updateAddonDto.totalStock < addon.currentlyBorrowed) {
+        throw new BadRequestException(
+          `Cannot set total stock (${updateAddonDto.totalStock}) below currently borrowed amount (${addon.currentlyBorrowed})`,
+        );
+      }
+
+      // Check pending on_hold bookings
+      const onHoldCommitments = await this.prisma.bookingsAddons.aggregate({
+        where: {
+          addon_id: addonId,
+          addonBooking: {
+            status: 'on_hold',
+          },
+        },
+        _sum: {
+          count: true,
+        },
+      });
+
+      const onHoldCount = onHoldCommitments._sum.count || 0;
+      const totalCommitted = addon.currentlyBorrowed + onHoldCount;
+
+      if (updateAddonDto.totalStock < totalCommitted) {
+        throw new BadRequestException(
+          `Cannot set total stock (${updateAddonDto.totalStock}) below total committed amount. ` +
+            `Currently borrowed: ${addon.currentlyBorrowed}, Pending (on_hold): ${onHoldCount}, Total: ${totalCommitted}`,
+        );
+      }
+    }
 
     const updatedAddon = await this.prisma.addons.update({
       where: { id: addonId },

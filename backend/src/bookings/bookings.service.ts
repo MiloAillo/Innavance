@@ -149,10 +149,14 @@ export class BookingsService {
         : true;
 
     // 2. CREATE THE BOOKING WITH TRANSACTION (INCLUDES WHATSAPP SEND)
-    const addonsToCreate = bookBodyDto.addons.map((addon) => ({
-      addon_id: addon.id,
-      count: addon.count,
-    }));
+    const addonsToCreate = bookBodyDto.addons.map((addon) => {
+      const addonData = roomAddons[addon.id];
+      return {
+        addon_id: addon.id,
+        count: addon.count,
+        priceAtBooking: addonData.price,
+      };
+    });
 
     // Encrypt NIK before storing
     const encryptedNik = this.encryptionService.encrypt(bookBodyDto.nik);

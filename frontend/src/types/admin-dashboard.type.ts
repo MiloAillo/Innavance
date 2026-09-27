@@ -128,8 +128,10 @@ export interface AdminBooking {
   };
   bookingsAddons: {
     count: number;
+    priceAtBooking: number;
     addonAddon: {
       addon: string;
+      price: number;
     };
   }[];
 }

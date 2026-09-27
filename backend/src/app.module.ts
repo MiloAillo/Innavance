@@ -11,6 +11,7 @@ import { MetricsService } from './metrics.service';
 import { AdminsDashboardModule } from './admins/dashboard/admins-dashboard.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { CleanupService } from './helper/cleanup.service';
 
 @Module({
   imports: [
@@ -34,6 +35,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
     WebsocketModule,
   ],
   controllers: [],
-  providers: [PrismaService, MetricsService],
+  providers: [PrismaService, MetricsService, CleanupService],
 })
 export class AppModule {}

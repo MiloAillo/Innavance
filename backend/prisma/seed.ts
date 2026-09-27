@@ -281,7 +281,8 @@ async function main() {
               data: {
                 booking_id: booking.id,
                 addon_id: addon_id,
-                count: count
+                count: count,
+                priceAtBooking: addon.price,
               }
             });
             

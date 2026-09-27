@@ -123,6 +123,31 @@ export function GuestDetailsModal({
                           {booking.duration} days
                         </span>
                       </div>
+                      
+                      {/* Price Breakdown */}
+                      <div className="border-t border-green-200 pt-2 mt-2">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-neutral-600">Room ({booking.duration} {booking.duration === 1 ? 'day' : 'days'}):</span>
+                          <span className="font-semibold text-neutral-800">
+                            Rp {(booking.bookingRoom?.price * booking.duration).toLocaleString("id-ID")}
+                          </span>
+                        </div>
+                        {booking.bookingsAddons && booking.bookingsAddons.length > 0 && (
+                          <>
+                            {booking.bookingsAddons.map((addon, idx) => (
+                              <div key={idx} className="flex justify-between mb-1">
+                                <span className="text-neutral-600">
+                                  {addon.addonAddon.addon} × {addon.count}:
+                                </span>
+                                <span className="font-semibold text-neutral-800">
+                                  Rp {(addon.priceAtBooking * addon.count).toLocaleString("id-ID")}
+                                </span>
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                      
                       <div className="flex justify-between border-t border-green-200 pt-2 mt-2">
                         <span className="text-neutral-600">Total Price:</span>
                         <span className="text-lg font-bold text-green-600">
