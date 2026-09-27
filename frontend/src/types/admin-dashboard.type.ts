@@ -60,7 +60,6 @@ export interface AdminRoom {
   name: string;
   price: number;
   capacity: number;
-  description: string;
   isAvailable: boolean;
   smartDoorPin: string;
   smartDoorIsLocked: boolean;
@@ -69,6 +68,10 @@ export interface AdminRoom {
   waterOutput: number;
   accountId: string | null;
   bookings: AdminRoomBooking[];
+  features?: {
+    id: number;
+    feature: string;
+  }[];
   roomsAddons?: {
     addon: RoomAddon;
   }[];

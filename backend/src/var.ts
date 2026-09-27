@@ -51,8 +51,6 @@ export const rooms_data = [
     name: 'VIP Space',
     price: 308137,
     capacity: 4,
-    description:
-      'An exceptional luxury suite designed for top-tier comfort and productivity. Features premium amenities, smart tech integration, and dedicated executive living space ideal for guests seeking an elevated stay.',
     addons: [1, 2, 3, 4],
     features: [
       'Double Bed',
@@ -67,8 +65,6 @@ export const rooms_data = [
     name: 'Golden Space',
     price: 274542,
     capacity: 4,
-    description:
-      'A spacious and modern room balancing comfort with premium convenience. Perfect for small groups or travelers who want private facilities, high-speed connectivity, and full air conditioning.',
     addons: [1, 2, 3, 4],
     features: [
       'Double Bed',
@@ -83,8 +79,6 @@ export const rooms_data = [
     name: 'Basic Space',
     price: 227233,
     capacity: 2,
-    description:
-      'A cozy and practical accommodation option tailored for budget-conscious guests. Offers essential comforts including air conditioning, reliable Wi-Fi, and a dedicated workspace.',
     addons: [2, 3, 4],
     features: [
       'Single Bed',
@@ -97,8 +91,6 @@ export const rooms_data = [
     name: 'Student Space',
     price: 213688,
     capacity: 2,
-    description:
-      'An ultra-affordable, functional living unit geared towards students and solo travelers. Comes with dedicated study furniture, personal secure storage, and shared amenities.',
     addons: [2],
     features: [
       'Single Bed',

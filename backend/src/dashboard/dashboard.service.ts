@@ -36,7 +36,6 @@ export class DashboardService {
         name: request.data.name,
         price: request.data.price,
         capacity: request.data.capacity,
-        description: request.data.description,
       },
       metrics: {
         is_addon_served: request.data.bookings[0].isAddonServed,

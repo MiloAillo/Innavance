@@ -75,7 +75,6 @@ model Rooms {
   name                String @db.VarChar(225)
   price               Int
   capacity            Int
-  description         String @db.Text
   isAvailable         Boolean                   @default(true)
   smartDoorPin        String @db.VarChar(6)      @default("157359")
   smartDoorIsLocked   Boolean

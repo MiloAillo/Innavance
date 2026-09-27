@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { AdminAddonPicker } from "./admin-addon-picker";
 import type { AdminAddon } from "../types/admin-dashboard.type";
 
@@ -7,7 +7,7 @@ interface RoomFormData {
   name: string;
   price: number;
   capacity: number;
-  description: string;
+  features: string[];
   addonIds: number[];
 }
 
@@ -37,7 +37,7 @@ export function AdminRoomForm({
       name: "",
       price: 0,
       capacity: 1,
-      description: "",
+      features: [],
       addonIds: [],
     }
   );
@@ -48,6 +48,7 @@ export function AdminRoomForm({
   const [capacityDisplay, setCapacityDisplay] = useState<string>(
     initialData?.capacity ? initialData.capacity.toString() : ""
   );
+  const [featureInput, setFeatureInput] = useState<string>("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -71,9 +72,6 @@ export function AdminRoomForm({
 
     if (formData.capacity < 1)
       newErrors.capacity = "Capacity must be at least 1";
-
-    if (!formData.description.trim())
-      newErrors.description = "Description is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -109,6 +107,40 @@ export function AdminRoomForm({
     if (value === "" || /^\d+$/.test(value)) {
       setCapacityDisplay(value);
       updateField("capacity", value === "" ? 0 : parseInt(value, 10));
+    }
+  };
+
+  const addFeature = () => {
+    const trimmed = featureInput.trim();
+    if (!trimmed) return;
+    if (trimmed.length > 500) {
+      setErrors((prev) => ({ ...prev, features: "Feature must be less than 500 characters" }));
+      return;
+    }
+    if (formData.features.includes(trimmed)) {
+      setErrors((prev) => ({ ...prev, features: "Feature already added" }));
+      return;
+    }
+    
+    updateField("features", [...formData.features, trimmed]);
+    setFeatureInput("");
+    if (errors.features) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.features;
+        return newErrors;
+      });
+    }
+  };
+
+  const removeFeature = (index: number) => {
+    updateField("features", formData.features.filter((_, i) => i !== index));
+  };
+
+  const handleFeatureKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addFeature();
     }
   };
 
@@ -179,18 +211,51 @@ export function AdminRoomForm({
 
           <div>
             <label className="text-sm font-semibold text-neutral-700">
-              Description <span className="text-red-500">*</span>
+              Features (Optional)
             </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => updateField("description", e.target.value)}
-              rows={4}
-              className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
-              disabled={isSubmitting}
-              placeholder="Describe the room features..."
-            />
-            {errors.description && (
-              <p className="mt-1 text-xs text-red-600">{errors.description}</p>
+            <div className="mt-1 flex gap-2">
+              <input
+                type="text"
+                value={featureInput}
+                onChange={(e) => setFeatureInput(e.target.value)}
+                onKeyDown={handleFeatureKeyDown}
+                className="flex-1 rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+                disabled={isSubmitting}
+                placeholder="e.g., WiFi, AC, Private Bath"
+                maxLength={500}
+              />
+              <button
+                type="button"
+                onClick={addFeature}
+                disabled={isSubmitting || !featureInput.trim()}
+                className="rounded-md bg-green-500 px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
+            </div>
+            {errors.features && (
+              <p className="mt-1 text-xs text-red-600">{errors.features}</p>
+            )}
+            
+            {formData.features.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {formData.features.map((feature, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm text-green-700"
+                  >
+                    {feature}
+                    <button
+                      type="button"
+                      onClick={() => removeFeature(index)}
+                      disabled={isSubmitting}
+                      className="ml-1 hover:text-green-900 disabled:opacity-50"
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                ))}
+              </div>
             )}
           </div>
         </div>

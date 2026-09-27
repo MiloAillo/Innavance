@@ -12,8 +12,10 @@ export class UpdateRoomDto {
   capacity?: number;
 
   @IsOptional()
-  @IsString()
-  description?: string;
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(500, { each: true })
+  features?: string[];
 
   @IsOptional()
   @IsArray()

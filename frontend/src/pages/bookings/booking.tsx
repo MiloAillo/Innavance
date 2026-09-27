@@ -196,8 +196,6 @@ export function Bookings(): JSX.Element {
                         </div>
                     </div>
                     <div className="h-px w-full bg-neutral-400" />
-                    {/* description */}
-                    <p className="font-medium text-base">{roomData?.description}</p>
                     {/* room features */}
                     <div className="flex flex-col">
                         <p className="font-semibold text-base">Room Features</p>

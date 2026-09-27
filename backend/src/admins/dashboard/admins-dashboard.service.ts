@@ -137,6 +137,12 @@ export class AdminsDashboardService {
                 take: 1,
               }
             : undefined,
+          features: {
+            select: {
+              id: true,
+              feature: true,
+            },
+          },
           roomsAddons: {
             include: {
               addon: {
@@ -1060,7 +1066,6 @@ export class AdminsDashboardService {
         name: createRoomDto.name,
         price: createRoomDto.price,
         capacity: createRoomDto.capacity,
-        description: createRoomDto.description,
         smartDoorIsLocked: true,
         smartDoorIsOpened: false,
         electricityOutput: 0,
@@ -1074,6 +1079,16 @@ export class AdminsDashboardService {
         data: createRoomDto.addonIds.map((addonId) => ({
           room_id: room.id,
           addon_id: addonId,
+        })),
+      });
+    }
+
+    // Create room features if provided
+    if (createRoomDto.features && createRoomDto.features.length > 0) {
+      await this.prisma.roomsFeatures.createMany({
+        data: createRoomDto.features.map((feature) => ({
+          room_id: room.id,
+          feature: feature.trim(),
         })),
       });
     }
@@ -1171,15 +1186,30 @@ export class AdminsDashboardService {
       }
     }
 
+    // Update room features if provided
+    if (updateRoomDto.features !== undefined) {
+      // Delete existing features
+      await this.prisma.roomsFeatures.deleteMany({
+        where: { room_id: roomId },
+      });
+
+      // Create new features (if array not empty)
+      if (updateRoomDto.features.length > 0) {
+        await this.prisma.roomsFeatures.createMany({
+          data: updateRoomDto.features.map((feature) => ({
+            room_id: roomId,
+            feature: feature.trim(),
+          })),
+        });
+      }
+    }
+
     const updatedRoom = await this.prisma.rooms.update({
       where: { id: roomId },
       data: {
         ...(updateRoomDto.price !== undefined && { price: updateRoomDto.price }),
         ...(updateRoomDto.capacity !== undefined && {
           capacity: updateRoomDto.capacity,
-        }),
-        ...(updateRoomDto.description !== undefined && {
-          description: updateRoomDto.description,
         }),
       },
     });

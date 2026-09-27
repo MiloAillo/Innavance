@@ -221,9 +221,9 @@ export async function createRoom(data: {
   name: string;
   price: number;
   capacity: number;
-  description: string;
+  features?: string[];
   addonIds?: number[];
-}): Promise<{ id: number; name: string; price: number; capacity: number; description: string }> {
+}): Promise<{ id: number; name: string; price: number; capacity: number }> {
   const response = await adminApi.post("/admins/dashboard/rooms", data);
   return response.data;
 }
@@ -233,10 +233,10 @@ export async function updateRoom(
   data: {
     price?: number;
     capacity?: number;
-    description?: string;
+    features?: string[];
     addonIds?: number[];
   }
-): Promise<{ id: number; price: number; capacity: number; description: string }> {
+): Promise<{ id: number; price: number; capacity: number }> {
   const response = await adminApi.patch(`/admins/dashboard/rooms/${id}`, data);
   return response.data;
 }

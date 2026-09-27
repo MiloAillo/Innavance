@@ -28,6 +28,11 @@ export function RoomCard({ room, onCreateBooking, onEdit, onDelete, isManager }:
                     <div>
                         <p className="text-lg font-bold text-neutral-800">{room.name}</p>
                         <p className="mt-1 text-sm text-neutral-500">{room.capacity} guests · Rp {room.price.toLocaleString("id-ID")}</p>
+                        {room.features && room.features.length > 0 && (
+                            <p className="mt-1 text-xs text-neutral-600">
+                                {room.features.map((f) => f.feature).join(" • ")}
+                            </p>
+                        )}
                     </div>
                     <div className="flex items-center gap-2">
                         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${room.isAvailable ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>

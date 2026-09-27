@@ -32,7 +32,6 @@ async function inspectRoomsDetailed() {
       console.log(`\n=== ${room.name} (ID: ${room.id}) ===`)
       console.log(`Price: ${room.price}`)
       console.log(`Capacity: ${room.capacity}`)
-      console.log(`Description: ${room.description}`)
       console.log(`\nFeatures (${room.features.length}):`)
       room.features.forEach((f, idx) => {
         console.log(`  ${idx + 1}. ${f.feature}`)

@@ -16,9 +16,11 @@ export class CreateRoomDto {
   @Min(1)
   capacity: number;
 
-  @IsNotEmpty()
-  @IsString()
-  description: string;
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(500, { each: true })
+  features?: string[];
 
   @IsOptional()
   @IsArray()

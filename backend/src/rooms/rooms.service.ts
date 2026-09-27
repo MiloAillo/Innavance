@@ -32,7 +32,6 @@ export class RoomsService {
           name: true,
           price: true,
           capacity: true,
-          description: true,
           isAvailable: true,
         },
       }),
@@ -64,7 +63,6 @@ export class RoomsService {
         name: true,
         price: true,
         capacity: true,
-        description: true,
         isAvailable: true,
         features: {
           select: {

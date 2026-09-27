@@ -284,12 +284,14 @@ export function AdminDashboard(): JSX.Element {
       setError(null);
       const user = await getAdminUserInfo();
       setUserInfo(user);
-      const [roomData, settingsData] = await Promise.all([
+      const [roomData, settingsData, addonsData] = await Promise.all([
         getAdminRooms({ include_booking: true }),
         getAdminSettings(),
+        getAddons(),
       ]);
       setRooms(roomData);
       setSettings(settingsData);
+      setAddons(addonsData);
       setSettingsForm({
         is_auto_approve: settingsData.is_auto_approve,
         auto_approve_time: settingsData.auto_approve_time,
@@ -621,27 +623,23 @@ export function AdminDashboard(): JSX.Element {
     name: string;
     price: number;
     capacity: number;
-    description: string;
+    features: string[];
     addonIds: number[];
   }) => {
-    try {
-      if (roomModalMode === "create") {
-        await createRoom(data);
-        setSuccessToast("Room created successfully!");
-      } else if (selectedRoomForEdit) {
-        await updateRoom(selectedRoomForEdit.id, {
-          price: data.price,
-          capacity: data.capacity,
-          description: data.description,
-          addonIds: data.addonIds,
-        });
-        setSuccessToast("Room updated successfully!");
-      }
-      await loadRoomsData();
-      setTimeout(() => setSuccessToast(null), 5000);
-    } catch (error) {
-      throw error;
+    if (roomModalMode === "create") {
+      await createRoom(data);
+      setSuccessToast("Room created successfully!");
+    } else if (selectedRoomForEdit) {
+      await updateRoom(selectedRoomForEdit.id, {
+        price: data.price,
+        capacity: data.capacity,
+        features: data.features,
+        addonIds: data.addonIds,
+      });
+      setSuccessToast("Room updated successfully!");
     }
+    await loadRoomsData();
+    setTimeout(() => setSuccessToast(null), 5000);
   };
 
   const handleDeleteRoom = (roomId: number) => {
@@ -2109,7 +2107,7 @@ export function AdminDashboard(): JSX.Element {
                 name: selectedRoomForEdit.name,
                 price: selectedRoomForEdit.price,
                 capacity: selectedRoomForEdit.capacity,
-                description: selectedRoomForEdit.description,
+                features: selectedRoomForEdit.features?.map(f => f.feature) || [],
                 addonIds: selectedRoomForEdit.roomsAddons?.map((ra) => ra.addon.id) || [],
               }
             : undefined

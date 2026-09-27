@@ -149,7 +149,6 @@ async function main() {
         name: data.name,
         price: data.price,
         capacity: data.capacity,
-        description: data.description,
         smartDoorPin: admin_smart_door_default_pin,
         smartDoorIsLocked: true,
         smartDoorIsOpened: false,
