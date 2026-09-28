@@ -23,6 +23,22 @@ export class BookingsProcessor extends WorkerHost {
       case 'auto-checkin': {
         const { room_name, room_id, phone_number, booking_id } = job.data;
 
+        // Verify booking is still in 'on_hold' status before processing
+        const booking = await this.bookingsService['prisma'].bookings.findUnique({
+          where: { id: booking_id },
+          select: { status: true },
+        });
+
+        if (!booking) {
+          console.log(`[auto-checkin] Booking ${booking_id} not found, skipping`);
+          return;
+        }
+
+        if (booking.status !== 'on_hold') {
+          console.log(`[auto-checkin] Booking ${booking_id} status is ${booking.status}, not on_hold. Skipping auto-checkin.`);
+          return;
+        }
+
         // trigger checkedIn inside bookingsService
         await this.bookingsService.checkedIn(
           room_name,

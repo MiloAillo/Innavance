@@ -402,6 +402,7 @@ export class AdminsDashboardService {
       const decryptedNIK = this.encryptionService.decrypt(booking.nik);
       return { nik: decryptedNIK };
     } catch (error) {
+      console.error(`[decryptNIK] Failed to decrypt NIK for booking ${bookingId}:`, error.message);
       return { nik: '[Decryption Failed]' };
     }
   }
@@ -518,7 +519,6 @@ export class AdminsDashboardService {
         adminSettings.isStaffAllowedToForceCheckout,
       is_staff_allowed_to_dissmiss_call:
         adminSettings.isStaffAllowedToDismissCall,
-      qr_instructions: adminSettings.qrInstructions,
     };
   }
 
@@ -544,9 +544,6 @@ export class AdminsDashboardService {
           : {}),
         ...(typeof updateSettingsDto.smart_door_default_pin !== 'undefined'
           ? { smartDoorDefaultPin: updateSettingsDto.smart_door_default_pin }
-          : {}),
-        ...(typeof updateSettingsDto.qr_instructions !== 'undefined'
-          ? { qrInstructions: updateSettingsDto.qr_instructions }
           : {}),
       },
     });
@@ -592,7 +589,6 @@ export class AdminsDashboardService {
         adminSettings.isStaffAllowedToForceCheckout,
       is_staff_allowed_to_dissmiss_call:
         adminSettings.isStaffAllowedToDismissCall,
-      qr_instructions: adminSettings.qrInstructions,
     };
   }
 
@@ -832,62 +828,71 @@ export class AdminsDashboardService {
       });
       if (!adminSettings) throw new InternalServerErrorException();
 
-      // update the booking to checked out
-      await this.prisma.bookings.update({
-        where: { id: booking.id },
-        data: { 
-          status: 'checked_out',
-          checkedOutAt: new Date(),
-        },
-      });
-
-      // rotate the door PIN to the default value and remove the accountId
-      await this.prisma.rooms.update({
-        where: { id: booking.bookingRoom.id },
-        data: {
-          smartDoorPin: adminSettings.smartDoorDefaultPin,
-          accountId: null,
-          isAvailable: true,
-        },
-      });
-
-      await this.createAdminNotification({
-        type: 'warning',
-        title: 'Force Checkout Executed',
-        description: `Room '${booking.bookingRoom.name}' has been force checked out.`,
-      });
-
-      const bookingWithAddons = await this.prisma.bookings.findUnique({
-        where: { id: booking.id },
-        include: { bookingsAddons: true },
-      });
-
-      // notify the client
-      await axios.post(
-        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-        {
-          phone_number: booking.phoneNumber,
-          message: `You has been forced to checked out from ${booking.bookingRoom.name} at Innavance.\nThe door PIN and Dashboard is now unusable.\nWe are aware of our decision and we are very sorry for it to be this way. 😉\n`,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
+      // Wrap all database operations in a transaction
+      await this.prisma.$transaction(async (tx) => {
+        // update the booking to checked out
+        await tx.bookings.update({
+          where: { id: booking.id },
+          data: { 
+            status: 'checked_out',
+            checkedOutAt: new Date(),
           },
-        },
-      );
+        });
 
-      if (bookingWithAddons) {
-        for (const bookingAddon of bookingWithAddons.bookingsAddons) {
-          await this.prisma.addons.update({
-            where: { id: bookingAddon.addon_id },
-            data: {
-              currentlyBorrowed: {
-                decrement: bookingAddon.count,
+        // rotate the door PIN to the default value and remove the accountId
+        await tx.rooms.update({
+          where: { id: booking.bookingRoom.id },
+          data: {
+            smartDoorPin: adminSettings.smartDoorDefaultPin,
+            accountId: null,
+            isAvailable: true,
+          },
+        });
+
+        await this.createAdminNotification({
+          type: 'warning',
+          title: 'Force Checkout Executed',
+          description: `Room '${booking.bookingRoom.name}' has been force checked out.`,
+        });
+
+        // Decrement addon stock within transaction
+        const bookingWithAddons = await tx.bookings.findUnique({
+          where: { id: booking.id },
+          include: { bookingsAddons: true },
+        });
+
+        if (bookingWithAddons) {
+          for (const bookingAddon of bookingWithAddons.bookingsAddons) {
+            await tx.addons.update({
+              where: { id: bookingAddon.addon_id },
+              data: {
+                currentlyBorrowed: {
+                  decrement: bookingAddon.count,
+                },
               },
-            },
-          });
+            });
+          }
         }
+      });
+
+      // notify the client outside transaction (non-critical)
+      try {
+        await axios.post(
+          `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+          {
+            phone_number: booking.phoneNumber,
+            message: `You has been forced to checked out from ${booking.bookingRoom.name} at Innavance.\nThe door PIN and Dashboard is now unusable.\nWe are aware of our decision and we are very sorry for it to be this way. 😉\n`,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+          },
+        );
+      } catch (error) {
+        console.error('[forceCheckout] WhatsApp notification failed:', error.message);
+        // Continue execution - notification failure should not block checkout
       }
     }
   }
@@ -916,20 +921,24 @@ export class AdminsDashboardService {
     });
     if (!booking) throw new NotFoundException();
 
-    await axios.post(
-      `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-      {
-        phone_number: booking.phoneNumber,
-        message: `We regret to inform you that your reservation request for ${booking.bookingRoom.name} at Innavance has been rejected.\nIf you believe this is a mistake, please contact our staff.\n\nThank you for your understanding.`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+    try {
+      await axios.post(
+        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+        {
+          phone_number: booking.phoneNumber,
+          message: `We regret to inform you that your reservation request for ${booking.bookingRoom.name} at Innavance has been rejected.\nIf you believe this is a mistake, please contact our staff.\n\nThank you for your understanding.`,
         },
-        timeout: 10000,
-      },
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 10000,
+        },
+      );
+    } catch (error) {
+      console.error('[rejectQueue] WhatsApp notification failed:', error.message);
+    }
 
     await this.prisma.bookings.update({
       where: { id: booking.id },
@@ -1084,19 +1093,24 @@ export class AdminsDashboardService {
       minimumFractionDigits: 0,
     }).format(booking.price);
 
-    await axios.post(
-      `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-      {
-        phone_number: booking.phoneNumber,
-        message: `Thank you for reserving a room at Innavance!\nYour reservation for ${booking.bookingRoom.name} has been approved! 🎉\n\n📋 *Booking Summary:*\n- Room: ${booking.bookingRoom.name}\n- Duration: ${booking.duration} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${booking.paymentMethod}\n\n🔑 *Access Details:*\n- Door PIN: ${smartDoorPin}\n- Account ID: ${accountId}\n\n🌐 *Dashboard Access:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login/user\n\nDon't forget to access your room dashboard for checking out, calling the innkeeper, and monitoring your room!\n\nHave any question? Don't be shy to call our innkeeper through the dashboard!`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+    try {
+      await axios.post(
+        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+        {
+          phone_number: booking.phoneNumber,
+          message: `Thank you for reserving a room at Innavance!\nYour reservation for ${booking.bookingRoom.name} has been approved! 🎉\n\n📋 *Booking Summary:*\n- Room: ${booking.bookingRoom.name}\n- Duration: ${booking.duration} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${booking.paymentMethod}\n\n🔑 *Access Details:*\n- Door PIN: ${smartDoorPin}\n- Account ID: ${accountId}\n\n🌐 *Dashboard Access:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login/user\n\nDon't forget to access your room dashboard for checking out, calling the innkeeper, and monitoring your room!\n\nHave any question? Don't be shy to call our innkeeper through the dashboard!`,
         },
-      },
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 10000,
+        },
+      );
+    } catch (error) {
+      console.error('[approveQueue] WhatsApp notification failed:', error.message);
+    }
   }
 
   async createRoom(

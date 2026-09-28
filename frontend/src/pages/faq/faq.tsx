@@ -7,22 +7,22 @@ const faqs = [
   {
     question: "How is Innavance different from regular boarding houses?",
     answer:
-      "Innavance eliminates the traditional front desk check-in process. You can enter our building, browse available rooms on screens or our website, book instantly, and go straight to your room. We use smart door locks with PIN codes instead of physical keys, and all rooms feature IoT monitoring through a unified web interface where you can track utilities, call staff, and manage your stay.",
+      "Innavance modernizes the boarding house experience with technology. Our staff handles booking and payment at the front desk, then you receive instant room access via smart door locks with PIN codes - no physical keys needed. All rooms feature IoT monitoring through a unified web interface where you can track utilities, call staff for assistance, and manage your stay entirely from your dashboard.",
   },
   {
     question: "How do I book a room?",
     answer:
-      "Come to our building and browse available rooms on the display screens or our website. Once you've chosen a room, scan its QR code to start the booking process. Fill in your details, select any add-ons, and confirm your reservation. You'll receive a WhatsApp message with your booking confirmation and room access details.",
+      "Visit the front desk in our building. Our staff will show you available rooms and help you choose the best option. Once you've selected a room, staff will create your booking, process your payment immediately, and send you a WhatsApp message with your room access PIN and guest dashboard login details.",
   },
   {
     question: "When do I pay for my stay?",
     answer:
-      "Payment is made after you check out. Once you've checked out through the guest dashboard and packed your belongings, come to the front desk to complete your payment and finalize your stay.",
+      "Payment is made immediately at the front desk when staff creates your booking. You pay upfront before receiving your room access PIN and dashboard credentials.",
   },
   {
     question: "How do I access my room?",
     answer:
-      "Your room uses a smart door lock - no physical keys needed. After booking, you'll receive a PIN code and account ID via WhatsApp. Use the PIN to unlock your smart door, and use the account ID to access your guest dashboard where you can monitor your room and manage your stay.",
+      "Your room uses a smart door lock - no physical keys needed. After staff creates your booking, you'll receive a PIN code and account ID via WhatsApp. Use the PIN to unlock your smart door, and use the account ID to access your guest dashboard where you can monitor your room and manage your stay.",
   },
   {
     question: "What utilities can I track?",
@@ -32,12 +32,12 @@ const faqs = [
   {
     question: "How do I request add-ons or call staff?",
     answer:
-      "Use the guest dashboard to request add-ons like extra bedding or cleaning supplies. You can also call staff directly through the dashboard if you need assistance or have any issues.",
+      "Add-ons like extra bedding or cleaning supplies are selected when staff creates your booking at the front desk. Once checked in, you can call staff directly through your guest dashboard if you need assistance or have any issues.",
   },
   {
     question: "How does checkout work?",
     answer:
-      "You can self-checkout from the guest dashboard when you're ready to leave. After checkout, your room enters a grace period before the door PIN resets, giving you time to pack. Once you've left the room, come to the front desk to complete your payment.",
+      "You can self-checkout from the guest dashboard when you're ready to leave. After checkout, your room enters a grace period before the door PIN resets, giving you time to pack and leave.",
   },
   {
     question: "What happens if I forget to checkout?",
@@ -47,7 +47,7 @@ const faqs = [
   {
     question: "Can I extend my stay?",
     answer:
-      "Yes, but extensions are subject to room availability. Contact staff or request an extension through the guest dashboard before your current booking ends. Payment for the extension will be processed with your final checkout payment.",
+      "Yes, but extensions are subject to room availability. Contact staff or request an extension through the guest dashboard before your current booking ends. Payment for the extension will be processed at the front desk.",
   },
   {
     question: "What should I do if I lose my PIN or account access?",

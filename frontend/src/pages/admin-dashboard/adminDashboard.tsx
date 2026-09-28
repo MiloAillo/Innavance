@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react/jsx-runtime";
-import { AnimatePresence, motion, Reorder } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
-  GripVertical,
   Loader2,
   ShieldCheck,
   Trash2,
@@ -159,11 +158,7 @@ export function AdminDashboard(): JSX.Element {
     auto_approve_time: 0,
     checkout_grace_period: 0,
     smart_door_default_pin: "",
-    qr_instructions: [] as string[],
   });
-  const [qrInstructionsWithIds, setQrInstructionsWithIds] = useState<
-    { id: string; text: string }[]
-  >([]);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [staffPermissionsForm, setStaffPermissionsForm] = useState({
@@ -297,14 +292,7 @@ export function AdminDashboard(): JSX.Element {
         auto_approve_time: settingsData.auto_approve_time,
         checkout_grace_period: settingsData.checkout_grace_period,
         smart_door_default_pin: settingsData.smart_door_default_pin,
-        qr_instructions: settingsData.qr_instructions || [],
       });
-      setQrInstructionsWithIds(
-        (settingsData.qr_instructions || []).map((text, index) => ({
-          id: `instruction-${Date.now()}-${index}`,
-          text,
-        }))
-      );
       setStaffPermissionsForm({
         is_staff_allowed_to_approve: settingsData.is_staff_allowed_to_approve,
         is_staff_allowed_to_force_checkout:
@@ -532,7 +520,6 @@ export function AdminDashboard(): JSX.Element {
         auto_approve_time: updatedSettings.auto_approve_time,
         checkout_grace_period: updatedSettings.checkout_grace_period,
         smart_door_default_pin: updatedSettings.smart_door_default_pin,
-        qr_instructions: updatedSettings.qr_instructions || [],
       });
     } catch (err: unknown) {
       setSettingsError(
@@ -1595,142 +1582,6 @@ export function AdminDashboard(): JSX.Element {
                     </p>
                   )}
                 </section>
-                <section className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-                  <div className="mb-5">
-                    <h3 className="text-lg font-bold text-neutral-800">
-                      QR Code Instructions
-                    </h3>
-                    <p className="text-sm text-neutral-500">
-                      Step-by-step guide displayed on QR code pages.
-                      {!isManager && " Only managers can edit."}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <Reorder.Group
-                      axis="y"
-                      values={qrInstructionsWithIds}
-                      onReorder={(newOrder) => {
-                        setQrInstructionsWithIds(newOrder);
-                        setSettingsForm({
-                          ...settingsForm,
-                          qr_instructions: newOrder.map((item) => item.text),
-                        });
-                      }}
-                      className="flex flex-col gap-3"
-                    >
-                      {qrInstructionsWithIds.map((item, index) => (
-                        <Reorder.Item
-                          key={item.id}
-                          value={item}
-                          className="flex items-center gap-2"
-                        >
-                          {isManager && !settingsSaving && (
-                            <div className="cursor-grab active:cursor-grabbing text-neutral-400 hover:text-neutral-600 transition-colors">
-                              <GripVertical size={20} />
-                            </div>
-                          )}
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-bold text-neutral-600">
-                            {index + 1}
-                          </span>
-                          <input
-                            value={item.text}
-                            disabled={!isManager || settingsSaving}
-                            onChange={(e) => {
-                              const newInstructions = [...qrInstructionsWithIds];
-                              newInstructions[index] = {
-                                ...newInstructions[index],
-                                text: e.target.value,
-                              };
-                              setQrInstructionsWithIds(newInstructions);
-                              setSettingsForm({
-                                ...settingsForm,
-                                qr_instructions: newInstructions.map((i) => i.text),
-                              });
-                            }}
-                            placeholder={`Step ${index + 1}`}
-                            className="flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm disabled:opacity-50"
-                          />
-                          {isManager && !settingsSaving && (
-                            <button
-                              onClick={() => {
-                                const newInstructions = qrInstructionsWithIds.filter(
-                                  (_, i) => i !== index,
-                                );
-                                setQrInstructionsWithIds(newInstructions);
-                                setSettingsForm({
-                                  ...settingsForm,
-                                  qr_instructions: newInstructions.map((i) => i.text),
-                                });
-                              }}
-                              className="rounded-md border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-100 transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                        </Reorder.Item>
-                      ))}
-                    </Reorder.Group>
-                    {isManager && !settingsSaving && (
-                      <button
-                        onClick={() => {
-                          const newItem = {
-                            id: `instruction-${Date.now()}`,
-                            text: "",
-                          };
-                          setQrInstructionsWithIds([...qrInstructionsWithIds, newItem]);
-                          setSettingsForm({
-                            ...settingsForm,
-                            qr_instructions: [...settingsForm.qr_instructions, ""],
-                          });
-                        }}
-                        className="rounded-lg border border-dashed border-neutral-300 bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-600 hover:bg-neutral-100 transition-colors"
-                      >
-                        + Add instruction step
-                      </button>
-                    )}
-                  </div>
-                  {isManager && (
-                    <div className="mt-5 flex justify-end">
-                      <button
-                        disabled={settingsSaving}
-                        onClick={handleSaveBookingSettings}
-                        className="rounded-lg bg-neutral-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-900 disabled:opacity-50 transition-colors"
-                      >
-                        {settingsSaving ? "Saving..." : "Save changes"}
-                      </button>
-                    </div>
-                  )}
-                </section>
-                <section className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-6">
-                  <h3 className="text-lg font-bold text-neutral-800">
-                    Experimental settings
-                  </h3>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    Room door state, water output, electricity output, and alarm
-                    controls require hardware endpoints.
-                  </p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {[
-                      "Door lock state",
-                      "Door open state",
-                      "Door alarm state",
-                      "Water output",
-                      "Electricity output",
-                      "Fire alarm state",
-                    ].map((label) => (
-                      <button
-                        key={label}
-                        disabled
-                        className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-left text-sm font-semibold text-neutral-400"
-                      >
-                        {label}
-                        <span className="mt-1 block text-xs font-normal">
-                          Unavailable
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
               </>
             )}
           </div>
@@ -2181,3 +2032,4 @@ export function AdminDashboard(): JSX.Element {
     </div>
   );
 }
+

@@ -4,8 +4,8 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -15,32 +15,31 @@ datasource db {
 
 // admin sides
 model Admin {
-  id                              Int                      @id @default(autoincrement())
-  isAutoApprove                   Boolean
-  autoApproveTime                 Int
-  smartDoorDefaultPin             String @db.VarChar(6)
-  checkOutGracePeriod             Int                      @default(60)
-  isStaffAllowedToApprove         Boolean                  @default(true)
-  isStaffAllowedToForceCheckout   Boolean                  @default(false)
-  isStaffAllowedToDismissCall     Boolean               @default(true)
-  qrInstructions                  Json                     @default("[]")
+  id                            Int     @id @default(autoincrement())
+  isAutoApprove                 Boolean
+  autoApproveTime               Int
+  smartDoorDefaultPin           String  @db.VarChar(6)
+  checkOutGracePeriod           Int     @default(60)
+  isStaffAllowedToApprove       Boolean @default(true)
+  isStaffAllowedToForceCheckout Boolean @default(false)
+  isStaffAllowedToDismissCall   Boolean @default(true)
 
-  notifications         AdminNotifications[]
-  users                 AdminUsers[]
+  notifications AdminNotifications[]
+  users         AdminUsers[]
 }
 
 model AdminUsers {
-  id              Int                         @id @default(autoincrement())
-  admin_id        Int
-  type            AdminUsersType              @default(staff)
-  name            String @db.VarChar(255)
-  username        String @db.VarChar(50)      @unique
-  password        String @db.VarChar(255)
-  refreshToken    String? @db.VarChar(255)    @unique
-  createdAt       DateTime                    @default(now())
+  id           Int            @id @default(autoincrement())
+  admin_id     Int
+  type         AdminUsersType @default(staff)
+  name         String         @db.VarChar(255)
+  username     String         @unique @db.VarChar(50)
+  password     String         @db.VarChar(255)
+  refreshToken String?        @unique @db.VarChar(255)
+  createdAt    DateTime       @default(now())
 
-  userAdmin       Admin                       @relation(fields: [admin_id], references: [id], onDelete: Cascade)
-  readNotifications AdminNotificationsRead[]
+  userAdmin              Admin                         @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  readNotifications      AdminNotificationsRead[]
   dismissedNotifications AdminNotificationsDismissed[]
 
   @@map("Admin_Users")
@@ -52,39 +51,39 @@ enum AdminUsersType {
 }
 
 model AdminNotifications {
-  id                  Int                         @id @default(autoincrement())
-  admin_id            Int
-  type                AdminNotificationsType      @default(info)
-  title               String @db.VarChar(255)
-  description         String @db.VarChar(500)
-  createdAt           DateTime                    @default(now())
+  id          Int                    @id @default(autoincrement())
+  admin_id    Int
+  type        AdminNotificationsType @default(info)
+  title       String                 @db.VarChar(255)
+  description String                 @db.VarChar(500)
+  createdAt   DateTime               @default(now())
 
-  notificationAdmin   Admin                       @relation(fields: [admin_id], references: [id], onDelete: Cascade)
-  readByUsers         AdminNotificationsRead[]
-  dismissedByUsers    AdminNotificationsDismissed[]
+  notificationAdmin Admin                         @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  readByUsers       AdminNotificationsRead[]
+  dismissedByUsers  AdminNotificationsDismissed[]
 
   @@map("Admin_Notifications")
 }
 
 model AdminNotificationsRead {
-  admin_user_id       Int
-  notification_id     Int
-  readAt              DateTime                    @default(now())
+  admin_user_id   Int
+  notification_id Int
+  readAt          DateTime @default(now())
 
-  adminUser           AdminUsers                  @relation(fields: [admin_user_id], references: [id], onDelete: Cascade)
-  notification        AdminNotifications          @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+  adminUser    AdminUsers         @relation(fields: [admin_user_id], references: [id], onDelete: Cascade)
+  notification AdminNotifications @relation(fields: [notification_id], references: [id], onDelete: Cascade)
 
   @@id([admin_user_id, notification_id])
   @@map("Admin_Notifications_Read")
 }
 
 model AdminNotificationsDismissed {
-  admin_user_id       Int
-  notification_id     Int
-  dismissedAt         DateTime                    @default(now())
+  admin_user_id   Int
+  notification_id Int
+  dismissedAt     DateTime @default(now())
 
-  adminUser           AdminUsers                  @relation(fields: [admin_user_id], references: [id], onDelete: Cascade)
-  notification        AdminNotifications          @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+  adminUser    AdminUsers         @relation(fields: [admin_user_id], references: [id], onDelete: Cascade)
+  notification AdminNotifications @relation(fields: [notification_id], references: [id], onDelete: Cascade)
 
   @@id([admin_user_id, notification_id])
   @@map("Admin_Notifications_Dismissed")
@@ -98,90 +97,90 @@ enum AdminNotificationsType {
 
 // user sides
 model Rooms {
-  id                  Int                       @id @default(autoincrement())
-  accountId           String? @db.VarChar(225)  @unique
-  name                String @db.VarChar(225)
-  price               Int
-  capacity            Int
-  isAvailable         Boolean                   @default(true)
-  smartDoorPin        String @db.VarChar(6)      @default("157359")
-  smartDoorIsLocked   Boolean
-  smartDoorIsOpened   Boolean
-  electricityOutput   Float
-  waterOutput         Float
-  deletedAt           DateTime?
+  id                Int       @id @default(autoincrement())
+  accountId         String?   @unique @db.VarChar(225)
+  name              String    @db.VarChar(225)
+  price             Int
+  capacity          Int
+  isAvailable       Boolean   @default(true)
+  smartDoorPin      String    @default("157359") @db.VarChar(6)
+  smartDoorIsLocked Boolean
+  smartDoorIsOpened Boolean
+  electricityOutput Float
+  waterOutput       Float
+  deletedAt         DateTime?
 
-  features            RoomsFeatures[]
-  roomsAddons         RoomsAddons[]
-  bookings            Bookings[]
+  features    RoomsFeatures[]
+  roomsAddons RoomsAddons[]
+  bookings    Bookings[]
 }
 
 model Addons {
-  id                Int                       @id @default(autoincrement())
-  addon             String @db.VarChar(50)    
+  id                Int     @id @default(autoincrement())
+  addon             String  @db.VarChar(50)
   price             Int
   borrowMaximum     Int
-  totalStock        Int                       @default(10)
-  currentlyBorrowed Int                       @default(0)
-  isActive          Boolean                   @default(true)
+  totalStock        Int     @default(10)
+  currentlyBorrowed Int     @default(0)
+  isActive          Boolean @default(true)
 
-  roomsAddons       RoomsAddons[]
-  bookingsAddons    BookingsAddons[]
+  roomsAddons    RoomsAddons[]
+  bookingsAddons BookingsAddons[]
 }
 
 model RoomsAddons {
-  room_id     Int
-  addon_id    Int
+  room_id  Int
+  addon_id Int
 
-  room        Rooms     @relation(fields: [room_id], references: [id], onDelete: Cascade)
-  addon       Addons    @relation(fields: [addon_id], references: [id], onDelete: Cascade)
+  room  Rooms  @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  addon Addons @relation(fields: [addon_id], references: [id], onDelete: Cascade)
+
   @@id([room_id, addon_id])
-
   @@map("Rooms_Addons")
 }
 
 model RoomsFeatures {
-  id            Int                         @id @default(autoincrement())
-  room_id       Int
-  feature       String @db.VarChar(500)
+  id      Int    @id @default(autoincrement())
+  room_id Int
+  feature String @db.VarChar(500)
 
-  featureRoom   Rooms                       @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  featureRoom Rooms @relation(fields: [room_id], references: [id], onDelete: Cascade)
 
   @@map("Rooms_Features")
 }
 
 model Bookings {
-  id                      Int                         @id @default(autoincrement())
-  room_id                 Int
-  status                  BookingsStatus
-  fullName                String @db.VarChar(100)     @default("")
-  phoneNumber             String @db.VarChar(25)
-  nik                     String @db.VarChar(255)     @default("")
-  idCardPhotoPath         String @db.VarChar(500)     @default("")
-  birthDate               DateTime                    @default(now())
-  sex                     Sex                         @default(MALE)
-  homeAddress             String @db.VarChar(500)     @default("")
-  profession              String? @db.VarChar(100)
-  workplaceSchool         String? @db.VarChar(200)
-  emergencyContactName    String @db.VarChar(100)     @default("")
-  emergencyContactNumber  String @db.VarChar(20)      @default("")
-  emergencyContactRelation String @db.VarChar(50)     @default("")
-  duration                Int
-  price                   Int
-  paymentMethod           String @db.VarChar(100)
-  isAddonServed           Boolean
-  isInnkeeperCalled       Boolean
-  isAutoApprove           Boolean                  @default(false)
-  checkoutGraceTime       Int?
-  autoApproveTime         Int?
-  createdAt               DateTime                    @default(now())
-  updatedAt               DateTime?                   @updatedAt
-  checkedInAt             DateTime?
-  checkedOutAt            DateTime?
+  id                       Int            @id @default(autoincrement())
+  room_id                  Int
+  status                   BookingsStatus
+  fullName                 String         @default("") @db.VarChar(100)
+  phoneNumber              String         @db.VarChar(25)
+  nik                      String         @default("") @db.VarChar(255)
+  idCardPhotoPath          String         @default("") @db.VarChar(500)
+  birthDate                DateTime       @default(now())
+  sex                      Sex            @default(MALE)
+  homeAddress              String         @default("") @db.VarChar(500)
+  profession               String?        @db.VarChar(100)
+  workplaceSchool          String?        @db.VarChar(200)
+  emergencyContactName     String         @default("") @db.VarChar(100)
+  emergencyContactNumber   String         @default("") @db.VarChar(20)
+  emergencyContactRelation String         @default("") @db.VarChar(50)
+  duration                 Int
+  price                    Int
+  paymentMethod            String         @db.VarChar(100)
+  isAddonServed            Boolean
+  isInnkeeperCalled        Boolean
+  isAutoApprove            Boolean        @default(false)
+  checkoutGraceTime        Int?
+  autoApproveTime          Int?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime?      @updatedAt
+  checkedInAt              DateTime?
+  checkedOutAt             DateTime?
 
-  bookingRoom             Rooms                       @relation(fields: [room_id], references: [id], onDelete: Restrict)
-  bookingsAddons          BookingsAddons[]
-  bookingsNotifications   BookingsNotifications[]
+  bookingRoom           Rooms                   @relation(fields: [room_id], references: [id], onDelete: Restrict)
+  bookingsAddons        BookingsAddons[]
+  bookingsNotifications BookingsNotifications[]
 
   @@index([nik])
   @@index([phoneNumber])
@@ -201,28 +200,27 @@ enum Sex {
 }
 
 model BookingsAddons {
-  booking_id      Int
-  addon_id        Int  
-  count           Int
-  priceAtBooking  Int
+  booking_id     Int
+  addon_id       Int
+  count          Int
+  priceAtBooking Int
 
-  addonBooking    Bookings                  @relation(fields: [booking_id], references: [id], onDelete: Cascade)
-  addonAddon      Addons                    @relation(fields: [addon_id], references: [id], onDelete: Restrict)
+  addonBooking Bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  addonAddon   Addons   @relation(fields: [addon_id], references: [id], onDelete: Restrict)
 
   @@id([booking_id, addon_id])
-
   @@map("Bookings_Addons")
 }
 
 model BookingsNotifications {
-  id                    Int                             @id @default(autoincrement())
-  booking_id            Int
-  type                  BookingsNotificationsType       @default(info)
-  title                 String @db.VarChar(255)
-  description           String @db.VarChar(500)
-  createdAt             DateTime                        @default(now())
+  id          Int                       @id @default(autoincrement())
+  booking_id  Int
+  type        BookingsNotificationsType @default(info)
+  title       String                    @db.VarChar(255)
+  description String                    @db.VarChar(500)
+  createdAt   DateTime                  @default(now())
 
-  notificationBooking   Bookings                        @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  notificationBooking Bookings @relation(fields: [booking_id], references: [id], onDelete: Cascade)
 
   @@map("Bookings_Notifications")
 }

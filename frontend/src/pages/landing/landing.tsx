@@ -18,18 +18,18 @@ import {
 const flow = [
   [
     ScanLine,
-    "Scan your room QR code",
-    "Opens reservation page for that specific room.",
+    "Visit the front desk",
+    "Our staff will help you find an available room that suits your needs.",
   ],
   [
     Sparkles,
-    "Confirm your stay",
-    "Enter stay details and select any available add-ons.",
+    "Staff creates your booking & payment",
+    "We'll complete your booking, process your payment, and send you login details via WhatsApp.",
   ],
   [
     ShieldCheck,
-    "Get in immediately",
-    "Enter your room right away and pay after checkout.",
+    "Access your room",
+    "Use your PIN to enter and manage your stay from the guest dashboard.",
   ],
 ] as const;
 
@@ -48,8 +48,8 @@ const features = [
   [Phone, "Staff help", "Request staff help through your dashboard."],
   [
     Sparkles,
-    "Request add-ons",
-    "Order available extras. Staff delivers them after booking approval.",
+    "Room add-ons",
+    "Select available extras during booking. Staff delivers them to your room.",
   ],
   [
     Bell,
@@ -155,15 +155,15 @@ export function Landing(): JSX.Element {
                 Your stay, in your hands.
               </p>
               <p className="mt-4 max-w-xl text-lg leading-8 text-neutral-300">
-                Book your room, manage your stay, and get help from staff in one
+                Manage your stay, track utilities, and get help from staff in one
                 place.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
-                  to="/bookings"
+                  to="/rooms"
                   className="inline-flex items-center gap-2 rounded-md bg-green-500 px-5 py-3 font-semibold text-white transition-all duration-300 hover:scale-105 hover:bg-green-400 hover:shadow-lg hover:shadow-green-500/25"
                 >
-                  Browse rooms <ArrowRight size={18} />
+                  View Rooms <ArrowRight size={18} />
                 </Link>
                 <Link
                   to="/login"
@@ -174,7 +174,7 @@ export function Landing(): JSX.Element {
               </div>
               <p className="mt-6 flex items-center gap-2 text-sm text-neutral-300">
                 <QrCode size={18} />
-                Scan the QR code displayed outside each rooms to book.
+                Visit the front desk to book with our staff.
               </p>
             </div>
             <div className="hidden justify-center lg:flex">
@@ -202,7 +202,7 @@ export function Landing(): JSX.Element {
                 How it works
               </p>
               <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                Getting started is simple
+                Your Stay Process
               </h2>
             </div>
             <div className="mt-12 grid gap-5 md:grid-cols-3">
@@ -224,7 +224,7 @@ export function Landing(): JSX.Element {
               ))}
             </div>
             <p className="mt-6 text-sm text-neutral-500">
-              Approval timing depends on boarding-house settings.
+              Room access is provided immediately after staff completes your booking.
             </p>
           </div>
         </section>
@@ -376,14 +376,14 @@ export function Landing(): JSX.Element {
                 Contact boarding-house staff for booking, payment, room, or
                 checkout assistance.
               </p>
-                        <a 
-                            href="https://wa.me/6285643525546" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 transition-colors font-semibold"
-                        >
-                            Contact admin
-                        </a>
+              <a 
+                  href="https://wa.me/6285643525546" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="mt-6 inline-flex items-center justify-center bg-green-500 text-white py-2.5 px-5 rounded-md hover:bg-green-600 transition-colors font-semibold"
+              >
+                  Contact admin
+              </a>
             </div>
             <div className="relative mx-auto flex h-72 w-full max-w-md items-center justify-center">
               <div className="absolute h-64 w-64 rounded-full border border-green-200 transition-all duration-500 hover:h-72 hover:w-72 hover:border-green-300" />
@@ -416,8 +416,8 @@ export function Landing(): JSX.Element {
             <Link to="/login" className="hover:text-white">
               Login
             </Link>
-            <Link to="/bookings" className="hover:text-white">
-              Browse rooms
+            <Link to="/rooms" className="hover:text-white">
+              View Rooms
             </Link>
             <a
               href="https://wa.me/6285643525546"

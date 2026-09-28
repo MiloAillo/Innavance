@@ -42,19 +42,23 @@ export class AdminDasboardProcessor extends WorkerHost {
         }
 
         // notify the client first
-        await axios.post(
-          `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-          {
-            phone_number: phone_number,
-            message: `You has been forced to checked out from ${room_name} at Innavance.\nThe door PIN and Dashboard is now unusable.\nWe are aware of our decision and we are very sorry for it to be this way. 😉\n`,
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
+        try {
+          await axios.post(
+            `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+            {
+              phone_number: phone_number,
+              message: `You has been forced to checked out from ${room_name} at Innavance.\nThe door PIN and Dashboard is now unusable.\nWe are aware of our decision and we are very sorry for it to be this way. 😉\n`,
             },
-          },
-        );
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+              },
+            },
+          );
+        } catch (error) {
+          console.error('[force_auto_checkout] WhatsApp notification failed:', error.message);
+        }
 
         // update the booking to checked out
         await this.prisma.bookings.update({

@@ -33,13 +33,38 @@ export class RoomsService {
           price: true,
           capacity: true,
           isAvailable: true,
+          features: {
+            select: {
+              id: true,
+              feature: true,
+            },
+          },
+          roomsAddons: {
+            select: {
+              addon: {
+                select: {
+                  id: true,
+                  addon: true,
+                  price: true,
+                  isActive: true,
+                },
+              },
+            },
+          },
         },
       }),
       this.prisma.rooms.count(),
     ]);
 
+    // Transform data to flatten roomsAddons structure
+    const transformedData = data.map(room => ({
+      ...room,
+      addons: room.roomsAddons.map(ra => ra.addon),
+      roomsAddons: undefined,
+    }));
+
     return {
-      data,
+      data: transformedData,
       meta: {
         total,
         page,
@@ -110,9 +135,6 @@ export class RoomsService {
       }),
       this.prisma.admin.findUnique({
         where: { id: 1 },
-        select: {
-          qrInstructions: true,
-        },
       }),
     ]);
 
@@ -124,7 +146,6 @@ export class RoomsService {
       price: room.price,
       capacity: room.capacity,
       features: room.features.map((object) => object.feature),
-      qr_instructions: adminSettings?.qrInstructions || [],
     };
   }
 }

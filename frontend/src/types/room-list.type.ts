@@ -8,6 +8,12 @@ export interface Room {
         id: number;
         feature: string;
     }>;
+    addons?: Array<{
+        id: number;
+        addon: string;
+        price: number;
+        isActive: boolean;
+    }>;
 }
 
 export interface RoomListMeta {

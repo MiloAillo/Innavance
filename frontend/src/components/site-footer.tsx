@@ -14,8 +14,8 @@ export function SiteFooter() {
           <Link to="/login" className="hover:text-white">
             Login
           </Link>
-          <Link to="/bookings" className="hover:text-white">
-            Browse rooms
+          <Link to="/rooms" className="hover:text-white">
+            View Rooms
           </Link>
           <a
             href="https://wa.me/6285643525546"

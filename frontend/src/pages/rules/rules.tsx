@@ -15,8 +15,8 @@ const rules = [
     icon: KeyRound,
     title: "Check-in & access",
     items: [
-      "Room access is granted via smart door PIN immediately after booking.",
-      "Your PIN and account ID will be sent to your phone via WhatsApp right after you complete your booking.",
+      "Room access is granted via smart door PIN immediately after staff completes your booking.",
+      "Your PIN and account ID will be sent to your phone via WhatsApp right after staff completes your booking.",
       "Do not share your PIN or account credentials with anyone.",
       "If you lose access, contact staff immediately through the guest dashboard.",
     ],
@@ -67,7 +67,6 @@ const rules = [
     items: [
       "You can self-checkout anytime from the guest dashboard before your booking period ends.",
       "A grace period applies after checkout before your PIN is reset and door access is removed.",
-      "After checkout, come to the front desk to complete your payment before leaving.",
       "Extensions are subject to room availability and must be arranged before your current booking ends.",
       "Overstaying without extension may result in forced checkout and additional charges.",
     ],

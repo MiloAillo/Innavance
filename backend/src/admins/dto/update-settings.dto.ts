@@ -1,5 +1,4 @@
 import {
-  IsArray,
   IsBoolean,
   IsInt,
   IsOptional,
@@ -32,9 +31,4 @@ export class UpdateSettingsDto {
   @Matches(/^\d{6}$/)
   @IsOptional()
   smart_door_default_pin: string;
-
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  qr_instructions: string[];
 }

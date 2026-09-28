@@ -13,15 +13,13 @@ import { AdminLogin } from "./pages/admin-login/adminLogin";
 import { UserDashboard } from "./pages/user-dashboard/userDashboard";
 import { AdminDashboard } from "./pages/admin-dashboard/adminDashboard";
 import { userDashboardLoader } from "./API/loader/user-dashboard-loader";
+import { RoomList } from "./pages/room-list/roomList";
 
 const browserRouter = createBrowserRouter([
   { path: "/", element: <Landing /> },
   { path: "rules", element: <Rules /> },
   { path: "faq", element: <FAQ /> },
-  // User self-booking routes removed - bookings now created by admin/staff only
-  // { path: "bookings", element: <RoomList /> },
-  // { path: "bookings/:id", element: <Bookings /> },
-  // { path: "qr-codes/:roomId", element: <QRCode /> },
+  { path: "rooms", element: <RoomList /> },
   { path: "status/:id", element: <ApprovalStatus /> },
   { path: "login", element: <LoginSelection /> },
   { path: "login/user", element: <UserLogin /> },

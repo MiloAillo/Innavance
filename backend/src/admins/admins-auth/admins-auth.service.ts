@@ -41,7 +41,9 @@ export class AdminsAuthService {
       type: user.type,
     };
 
-    const activeToken: ActiveToken = this.jwtService.sign(jwtPayload);
+    const activeToken: ActiveToken = this.jwtService.sign(jwtPayload, {
+      expiresIn: '15m',
+    });
 
     return { refreshToken, activeToken };
   }
@@ -58,6 +60,8 @@ export class AdminsAuthService {
       id: user.id,
       username: user.username,
       type: user.type,
+    }, {
+      expiresIn: '15m',
     });
 
     return activeToken;

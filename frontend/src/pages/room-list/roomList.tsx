@@ -5,10 +5,8 @@ import {
   ChevronRight,
   CircleAlert,
   Loader2,
-  QrCode,
   Users,
 } from "lucide-react";
-import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import { getRoomList } from "../../API/rooms-api";
 import type { RoomListResponse } from "../../types/room-list.type";
@@ -23,7 +21,6 @@ export function RoomList(): JSX.Element {
   const [hasError, setHasError] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "price" | "capacity">("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
-  const navigate = useNavigate();
 
   useEffect(() => {
     getRoomList({ page, limit: 12, order_by: sortBy, order })
@@ -50,11 +47,10 @@ export function RoomList(): JSX.Element {
           className="mb-5"
         >
           <p className="font-bold text-2xl text-neutral-800">
-            Choose a room
+            Available Rooms
           </p>
           <p className="mt-1 text-sm text-neutral-600">
-            Select any room to view details and reserve. You can also scan its
-            QR code to open it directly.
+            View our available rooms and their features. Visit the front desk to book with our staff.
           </p>
         </motion.div>
 
@@ -146,71 +142,88 @@ export function RoomList(): JSX.Element {
               className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
             >
               {rooms?.data.map((room) => (
-                <div
+                <article
                   key={room.id}
-                  className="flex min-h-48 flex-col rounded-lg bg-white p-5 shadow"
+                  className="flex flex-col rounded-lg border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-m`d"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xl font-semibold">{room.name}</p>
+                  {/* Header: Room Name & Availability */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <h3 className="text-xl font-bold text-neutral-900">{room.name}</h3>
                     <span
-                      className={`flex items-center gap-1.5 rounded-sm border px-2 py-1 text-sm font-medium ${room.isAvailable ? "border-green-500 bg-green-100 text-green-600" : "border-red-500 bg-red-100 text-red-600"}`}
+                      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${room.isAvailable ? "border-green-500 bg-green-50 text-green-700" : "border-red-500 bg-red-50 text-red-700"}`}
                     >
                       <span
                         className={`h-1.5 w-1.5 rounded-full ${room.isAvailable ? "bg-green-500" : "bg-red-500"}`}
                       />
-                      {room.isAvailable ? "available" : "not available"}
+                      {room.isAvailable ? "Available" : "Occupied"}
                     </span>
                   </div>
-                  <div className="my-5 h-px w-full bg-neutral-300" />
-                  <div className="flex flex-1 flex-col gap-2">
-                    <span className="flex w-fit items-center gap-1 rounded-sm bg-neutral-700 px-2 py-1 text-sm font-medium text-white">
-                      <Users size={15} />
-                      {room.capacity}{" "}
-                      {room.capacity === 1 ? "person" : "people"} max
+
+                  {/* Capacity */}
+                  <div className="mb-4">
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-neutral-800 px-2.5 py-1.5 text-sm font-medium text-white">
+                      <Users size={16} />
+                      <span>
+                        {room.capacity} {room.capacity === 1 ? "person" : "people"} max
+                      </span>
                     </span>
-                    {room.features && room.features.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {room.features.slice(0, 3).map((feature) => (
-                          <span 
+                  </div>
+
+                  {/* Features Section - Show ALL features */}
+                  {room.features && room.features.length > 0 ? (
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                        Features
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {room.features.map((feature) => (
+                          <span
                             key={feature.id}
-                            className="text-xs text-neutral-600"
+                            className="rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-700"
                           >
                             {feature.feature}
                           </span>
                         ))}
-                        {room.features.length > 3 && (
-                          <span className="text-xs text-neutral-500">
-                            +{room.features.length - 3} more
-                          </span>
-                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="mt-5 flex items-end justify-between">
-                    <div>
-                      <p className="text-sm">Price starts from</p>
-                      <p className="text-xl font-bold">
-                        Rp.{room.price.toLocaleString("id-ID")}
-                        <span className="text-base font-normal">/day</span>
+                    </div>
+                  ) : (
+                    <div className="mb-4 flex-1">
+                      <p className="text-sm text-neutral-400 italic">No features listed</p>
+                    </div>
+                  )}
+
+                  {/* Available Add-ons Section - Show only active addons */}
+                  {room.addons && room.addons.filter(a => a.isActive).length > 0 && (
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                        Available Add-ons
                       </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {room.addons
+                          .filter(addon => addon.isActive)
+                          .map((addon) => (
+                            <span
+                              key={addon.id}
+                              className="rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-xs text-neutral-700"
+                            >
+                              {addon.addon}
+                            </span>
+                          ))}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => navigate(`/qr-codes/${room.id}`)}
-                        className="rounded-md border border-green-400 bg-white p-2 text-green-600 transition-colors hover:bg-green-50"
-                        aria-label="View QR code"
-                      >
-                        <QrCode size={20} />
-                      </button>
-                      <button
-                        onClick={() => navigate(`/bookings/${room.id}`)}
-                        className="rounded-md bg-green-400 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-500"
-                      >
-                        View room
-                      </button>
-                    </div>
+                  )}
+
+                  {/* Price Section */}
+                  <div className="mt-auto border-t border-neutral-200 pt-3">
+                    <p className="text-xs text-neutral-500">
+                      Price starts from
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-neutral-900">
+                      Rp.{room.price.toLocaleString("id-ID")}
+                      <span className="text-base font-normal text-neutral-600">/day</span>
+                    </p>
                   </div>
-                </div>
+                </article>
               ))}
             </motion.div>
 

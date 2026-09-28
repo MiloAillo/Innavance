@@ -9,7 +9,6 @@ import {
   admin_staff_allowed_to_approve,
   admin_staff_allowed_to_force_checkout,
   admin_staff_allowed_to_dismiss_call,
-  admin_qr_instructions,
   rooms_data 
 } from "../src/var";
 import * as bcrypt from "bcrypt";
@@ -76,7 +75,6 @@ async function main() {
       isStaffAllowedToApprove: admin_staff_allowed_to_approve,
       isStaffAllowedToForceCheckout: admin_staff_allowed_to_force_checkout,
       isStaffAllowedToDismissCall: admin_staff_allowed_to_dismiss_call,
-      qrInstructions: admin_qr_instructions,
     }
   });
   console.log(`Created admin with ID: ${admin.id}`);
@@ -187,34 +185,46 @@ async function main() {
     }
   }
 
-  console.log("Generating 20 historical bookings...");
-  // Generate 20 checked-out bookings spread over May-August 2026
+  console.log("Generating 50 historical bookings...");
+  // Generate 50 checked-out bookings spread over May-August 2026
   const customerNames = [
     "Budi Santoso",
     "Siti Nurhaliza", 
     "Ahmad Rizki",
     "Dewi Lestari",
     "Faris Kahlil Haidar",
-    "Rina Wijaya"
+    "Rina Wijaya",
+    "Agus Setiawan",
+    "Maya Puspita",
+    "Hendra Gunawan",
+    "Fitri Handayani",
+    "Doni Prasetyo",
+    "Indah Permata",
+    "Rudi Hartono",
+    "Ayu Lestari",
+    "Bambang Suryanto"
   ];
 
   const paymentMethod = "Cash"; // All bookings use Cash payment
 
-  // Distribution: VIP (5), Golden (5), Basic (6), Student (4)
-  // Use indices to reference createdRooms array [0=VIP, 1=Golden, 2=Basic, 3=Student]
+  // Distribution across all 21 rooms
+  // VIP (3 rooms): indices 0-2
+  // Golden (5 rooms): indices 3-7
+  // Basic (7 rooms): indices 8-14
+  // Student (6 rooms): indices 15-20
   const roomDistribution = [
-    0, 0, 0, 0, 0,  // VIP (5)
-    1, 1, 1, 1, 1,  // Golden (5)
-    2, 2, 2, 2, 2, 2,  // Basic (6)
-    3, 3, 3, 3  // Student (4)
+    0, 1, 2,           // VIP rooms (3)
+    3, 4, 5, 6, 7,     // Golden rooms (5)
+    8, 9, 10, 11, 12, 13, 14,  // Basic rooms (7)
+    15, 16, 17, 18, 19, 20     // Student rooms (6)
   ];
 
   // Spread dates from May 1 to August 30, 2026
   const startDate = new Date('2026-05-01T08:00:00Z');
   const endDate = new Date('2026-08-30T20:00:00Z');
 
-  for (let i = 0; i < 20; i++) {
-    const roomIndex = roomDistribution[i];
+  for (let i = 0; i < 50; i++) {
+    const roomIndex = roomDistribution[i % roomDistribution.length];
     const room = createdRooms[roomIndex];
     
     if (!room) continue;
@@ -304,7 +314,7 @@ async function main() {
   console.log(`   - 3 Admin users (1 manager, 2 staff)`);
   console.log(`   - ${addons_data.length} Addons`);
   console.log(`   - ${rooms_data.length} Rooms with features and addons`);
-  console.log(`   - 20 Historical bookings (May-August 2026)`);
+  console.log(`   - 50 Historical bookings (May-August 2026)`);
 }
 
 main()

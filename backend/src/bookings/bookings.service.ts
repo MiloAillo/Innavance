@@ -91,6 +91,9 @@ export class BookingsService {
     if (!room)
       throw new NotFoundException('No room specified by room_id found');
 
+    if (room.deletedAt)
+      throw new NotFoundException('Room is not available');
+
     if (!room.isAvailable)
       throw new UnauthorizedException('Room is already reserved');
 
@@ -395,20 +398,24 @@ export class BookingsService {
       minimumFractionDigits: 0,
     }).format(price);
 
-    await axios.post(
-      `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-      {
-        phone_number: phone_number,
-        message: `Thank you for reserving a room at Innavance!\nYour reservation request is currently being reviewed by us.\n\n📋 *Booking Summary:*\n- Room: ${room_name}\n- Duration: ${duration} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${payment_method}\n\nOnce reviewed, we will notify you about our decision here.\n\n🔍 *Track Your Status:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/status/${booking_id}`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+    try {
+      await axios.post(
+        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+        {
+          phone_number: phone_number,
+          message: `Thank you for reserving a room at Innavance!\nYour reservation request is currently being reviewed by us.\n\n📋 *Booking Summary:*\n- Room: ${room_name}\n- Duration: ${duration} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${payment_method}\n\nOnce reviewed, we will notify you about our decision here.\n\n🔍 *Track Your Status:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/status/${booking_id}`,
         },
-        timeout: 10000,
-      },
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 10000,
+        },
+      );
+    } catch (error) {
+      console.error('[onHoldWithWhatsApp] WhatsApp notification failed:', error.message);
+    }
   }
 
   async checkedInWithTransaction(
@@ -446,20 +453,24 @@ export class BookingsService {
       minimumFractionDigits: 0,
     }).format(price);
 
-    await axios.post(
-      `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-      {
-        phone_number: phone_number,
-        message: `Thank you for reserving a room at Innavance!\nYour reservation for ${room_name} has been approved! 🎉\n\n📋 *Booking Summary:*\n- Room: ${room_name}\n- Duration: ${duration} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${payment_method}\n\n🔑 *Access Details:*\n- Door PIN: ${smartDoorPin}\n- Account ID: ${accountId}\n\n🌐 *Dashboard Access:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login/user\n\nDon't forget to access your room dashboard for checking out, calling the innkeeper, and monitoring your room!\n\nHave any question? Don't be shy to call our innkeeper through the dashboard!`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+    try {
+      await axios.post(
+        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+        {
+          phone_number: phone_number,
+          message: `Thank you for reserving a room at Innavance!\nYour reservation for ${room_name} has been approved! 🎉\n\n📋 *Booking Summary:*\n- Room: ${room_name}\n- Duration: ${duration} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${payment_method}\n\n🔑 *Access Details:*\n- Door PIN: ${smartDoorPin}\n- Account ID: ${accountId}\n\n🌐 *Dashboard Access:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login/user\n\nDon't forget to access your room dashboard for checking out, calling the innkeeper, and monitoring your room!\n\nHave any question? Don't be shy to call our innkeeper through the dashboard!`,
         },
-        timeout: 10000,
-      },
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 10000,
+        },
+      );
+    } catch (error) {
+      console.error('[checkedInWithTransaction] WhatsApp notification failed:', error.message);
+    }
   }
 
   async onHold(
@@ -501,20 +512,24 @@ export class BookingsService {
       minimumFractionDigits: 0,
     }).format(booking?.price ?? 0);
 
-    await axios.post(
-      `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-      {
-        phone_number: phone_number,
-        message: `Thank you for reserving a room at Innavance!\nYour reservation request is currently being reviewed by us.\n\n📋 *Booking Summary:*\n- Room: ${room_name}\n- Duration: ${booking?.duration ?? 0} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${booking?.paymentMethod ?? 'N/A'}\n\nOnce reviewed, we will notify you about our decision here.\n\n🔍 *Track Your Status:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/status/${booking_id}`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+    try {
+      await axios.post(
+        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+        {
+          phone_number: phone_number,
+          message: `Thank you for reserving a room at Innavance!\nYour reservation request is currently being reviewed by us.\n\n📋 *Booking Summary:*\n- Room: ${room_name}\n- Duration: ${booking?.duration ?? 0} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${booking?.paymentMethod ?? 'N/A'}\n\nOnce reviewed, we will notify you about our decision here.\n\n🔍 *Track Your Status:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/status/${booking_id}`,
         },
-        timeout: 10000,
-      },
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 10000,
+        },
+      );
+    } catch (error) {
+      console.error('[onHold] WhatsApp notification failed:', error.message);
+    }
   }
 
   // modular function used by another function to update the room state to checked in from being on hold in approval queue
@@ -559,20 +574,24 @@ export class BookingsService {
       minimumFractionDigits: 0,
     }).format(booking?.price ?? 0);
 
-    await axios.post(
-      `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-      {
-        phone_number: phone_number,
-        message: `Thank you for reserving a room at Innavance!\nYour reservation for ${room_name} has been approved! 🎉\n\n📋 *Booking Summary:*\n- Room: ${room_name}\n- Duration: ${booking?.duration ?? 0} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${booking?.paymentMethod ?? 'N/A'}\n\n🔑 *Access Details:*\n- Door PIN: ${smartDoorPin}\n- Account ID: ${accountId}\n\n🌐 *Dashboard Access:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login/user\n\nDon't forget to access your room dashboard for checking out, calling the innkeeper, and monitoring your room!\n\nHave any question? Don't be shy to call our innkeeper through the dashboard!`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+    try {
+      await axios.post(
+        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+        {
+          phone_number: phone_number,
+          message: `Thank you for reserving a room at Innavance!\nYour reservation for ${room_name} has been approved! 🎉\n\n📋 *Booking Summary:*\n- Room: ${room_name}\n- Duration: ${booking?.duration ?? 0} day(s)\n- Total Price: ${formattedPrice}\n- Payment: ${booking?.paymentMethod ?? 'N/A'}\n\n🔑 *Access Details:*\n- Door PIN: ${smartDoorPin}\n- Account ID: ${accountId}\n\n🌐 *Dashboard Access:*\n${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/login/user\n\nDon't forget to access your room dashboard for checking out, calling the innkeeper, and monitoring your room!\n\nHave any question? Don't be shy to call our innkeeper through the dashboard!`,
         },
-        timeout: 10000,
-      },
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 10000,
+        },
+      );
+    } catch (error) {
+      console.error('[checkedIn] WhatsApp notification failed:', error.message);
+    }
   }
 
   // modular function used by another function to update the room state to checking out
@@ -605,20 +624,24 @@ export class BookingsService {
       },
     );
 
-    await axios.post(
-      `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-      {
-        phone_number: phone_number,
-        message: `It looks like you checked out from ${room_name} at Innavance.\nWe give you ${checkOutGracePeriod} minutes to pack your belongings and kiss our room goodbye.\n\nPlease leave the room before the grace period ends, as the door PIN will become unusable.`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+    try {
+      await axios.post(
+        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+        {
+          phone_number: phone_number,
+          message: `It looks like you checked out from ${room_name} at Innavance.\nWe give you ${checkOutGracePeriod} minutes to pack your belongings and kiss our room goodbye.\n\nPlease leave the room before the grace period ends, as the door PIN will become unusable.`,
         },
-        timeout: 10000,
-      },
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 10000,
+        },
+      );
+    } catch (error) {
+      console.error('[checkingOutWithTransaction] WhatsApp notification failed:', error.message);
+    }
   }
 
   async checkedOutWithTransaction(
@@ -714,19 +737,24 @@ export class BookingsService {
       },
     );
 
-    await axios.post(
-      `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-      {
-        phone_number: phone_number,
-        message: `It looks like you checked out from ${room_name} at Innavance.\nWe give you ${adminSettings.checkOutGracePeriod} minutes to pack your belongings and kiss our room goodbye.\n\nPlease leave the room before the grace period ends, as the door PIN will become unusable.`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+    try {
+      await axios.post(
+        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+        {
+          phone_number: phone_number,
+          message: `It looks like you checked out from ${room_name} at Innavance.\nWe give you ${adminSettings.checkOutGracePeriod} minutes to pack your belongings and kiss our room goodbye.\n\nPlease leave the room before the grace period ends, as the door PIN will become unusable.`,
         },
-      },
-    );
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 10000,
+        },
+      );
+    } catch (error) {
+      console.error('[checkingOut] WhatsApp notification failed:', error.message);
+    }
   }
 
   async checkedOut(
@@ -750,48 +778,57 @@ export class BookingsService {
 
     if (!booking) throw new NotFoundException('Booking not found');
 
-    await this.prisma.rooms.update({
-      where: { id: room_id },
-      data: {
-        smartDoorPin: adminSettings.smartDoorDefaultPin,
-        accountId: null,
-        isAvailable: true,
-      },
-    });
-
-    await this.prisma.bookings.update({
-      where: { id: booking_id },
-      data: { 
-        status: 'checked_out',
-        checkedOutAt: new Date(),
-      },
-    });
-
-    // Decrement currentlyBorrowed for each addon
-    for (const bookingAddon of booking.bookingsAddons) {
-      await this.prisma.addons.update({
-        where: { id: bookingAddon.addon_id },
+    // Wrap all database operations in a transaction
+    await this.prisma.$transaction(async (tx) => {
+      await tx.rooms.update({
+        where: { id: room_id },
         data: {
-          currentlyBorrowed: {
-            decrement: bookingAddon.count,
-          },
+          smartDoorPin: adminSettings.smartDoorDefaultPin,
+          accountId: null,
+          isAvailable: true,
         },
       });
-    }
 
-    await axios.post(
-      `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
-      {
-        phone_number: phone_number,
-        message: `You have checked out from ${room_name} at Innavance.\nThe door PIN and Dashboard is now unusable.\n\nThank you for choosing us, we always welcome you and are excited to see you again! 😉\n`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
+      await tx.bookings.update({
+        where: { id: booking_id },
+        data: { 
+          status: 'checked_out',
+          checkedOutAt: new Date(),
         },
-        timeout: 10000,
-      },
-    );
+      });
+
+      // Decrement currentlyBorrowed for each addon
+      for (const bookingAddon of booking.bookingsAddons) {
+        await tx.addons.update({
+          where: { id: bookingAddon.addon_id },
+          data: {
+            currentlyBorrowed: {
+              decrement: bookingAddon.count,
+            },
+          },
+        });
+      }
+    });
+
+    // Send WhatsApp notification outside transaction (non-critical)
+    try {
+      await axios.post(
+        `${process.env.WHATSAPP_SERVICE_URL ?? 'http://localhost:3001'}/send`,
+        {
+          phone_number: phone_number,
+          message: `You have checked out from ${room_name} at Innavance.\nThe door PIN and Dashboard is now unusable.\n\nThank you for choosing us, we always welcome you and are excited to see you again! 😉\n`,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 10000,
+        },
+      );
+    } catch (error) {
+      console.error('[checkedOut] WhatsApp notification failed:', error.message);
+      // Continue execution - notification failure should not block checkout
+    }
   }
 }
