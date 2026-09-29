@@ -41,7 +41,7 @@ export function UserLogin(): JSX.Element {
 
   useEffect(() => {
     if (state === "FETCH_ROOM_LIST") {
-      getRoomList({ order_by: "name", order: "asc" })
+      getRoomList({ order_by: "name", order: "asc", limit: 100 })
         .then((data) => {
           console.log("Room list:", data);
           const unavailableRooms = {
