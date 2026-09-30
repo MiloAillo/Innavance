@@ -187,7 +187,7 @@ export function BookingCard({ booking, onApprove, onReject, onServeAddon, onDism
                 )}
 
                 {/* Addon served */}
-                {!booking.isAddonServed && booking.bookingsAddons.length > 0 && booking.status !== "on_hold" && booking.status !== "checking_out" && (
+                {!booking.isAddonServed && booking.bookingsAddons.length > 0 && booking.status !== "on_hold" && booking.status !== "checking_out" && booking.status !== "rejected" &&booking.status !== "checked_out" && (
                     <button
                         disabled={isServingAddon}
                         onClick={() => onServeAddon(booking.id)}
